@@ -1,0 +1,49 @@
+{
+  "name": "rom-downloader",
+  "version": "1.0.0",
+  "description": "A Playwright-based ROM downloader with web and CLI interfaces",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --inspect src/index.js",
+    "web": "node src/server.js",
+    "web:dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "nodemon src/server.js",
+    "client:dev": "vite",
+    "client:build": "vite build",
+    "install-browsers": "npx playwright install"
+  },
+  "keywords": [
+    "rom",
+    "downloader",
+    "playwright",
+    "cli",
+    "scraper"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "chalk": "^5.3.0",
+    "cli-progress": "^3.12.0",
+    "commander": "^11.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "fs-extra": "^11.2.0",
+    "fuse.js": "^7.1.0",
+    "inquirer": "^9.2.0",
+    "multer": "^2.0.2",
+    "playwright": "^1.40.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "vite": "^7.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "concurrently": "^9.2.0",
+    "nodemon": "^3.1.10"
+  }
+}
