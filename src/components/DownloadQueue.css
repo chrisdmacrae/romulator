@@ -337,6 +337,102 @@
   gap: 1rem;
 }
 
+.organize-section {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #e1e5e9;
+  background: #f8fff9;
+  text-align: center;
+}
+
+.organize-downloads-button {
+  background: #17a2b8;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.organize-downloads-button:hover:not(:disabled) {
+  background: #138496;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+}
+
+.completed-downloads-section {
+  padding: 2rem;
+  border-top: 1px solid #e1e5e9;
+}
+
+.completed-downloads-section h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.completed-downloads-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.completed-download-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8fff9;
+  border: 1px solid #d4edda;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.completed-download-item:hover {
+  background: #e8f5e8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15);
+}
+
+.download-icon {
+  font-size: 1.5rem;
+  min-width: 32px;
+  text-align: center;
+}
+
+.download-details {
+  flex: 1;
+}
+
+.download-name {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+}
+
+.download-info {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.download-size {
+  font-family: monospace;
+  background: #e9ecef;
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+}
+
+.download-date {
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
 .info-item {
   display: flex;
   flex-direction: column;
@@ -407,5 +503,18 @@
   .queue-info {
     padding: 1rem;
     flex-direction: column;
+  }
+
+  .completed-downloads-section {
+    padding: 1rem;
+  }
+
+  .completed-download-item {
+    padding: 0.75rem;
+  }
+
+  .download-info {
+    flex-direction: column;
+    gap: 0.25rem;
   }
 }

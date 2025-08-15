@@ -4,10 +4,11 @@ import UrlInput from './components/UrlInput';
 import RomTable from './components/RomTable';
 import DownloadProgress from './components/DownloadProgress';
 import DownloadQueue from './components/DownloadQueue';
+import Settings from './components/Settings';
 import './App.css';
 
 function App() {
-  const [currentStep, setCurrentStep] = useState('url'); // 'url', 'roms', 'downloading', 'queue'
+  const [currentStep, setCurrentStep] = useState('url'); // 'url', 'roms', 'downloading', 'queue', 'settings'
   const [sessionId, setSessionId] = useState(null);
   const [roms, setRoms] = useState([]);
   const [selectedRoms, setSelectedRoms] = useState([]);
@@ -144,6 +145,10 @@ function App() {
     setCurrentStep('queue');
   };
 
+  const handleViewSettings = () => {
+    setCurrentStep('settings');
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -161,9 +166,14 @@ function App() {
           <button
             className={`nav-button ${currentStep === 'queue' ? 'active' : ''}`}
             onClick={handleViewQueue}
-            disabled={!sessionId}
           >
             📋 My Queue
+          </button>
+          <button
+            className={`nav-button ${currentStep === 'settings' ? 'active' : ''}`}
+            onClick={handleViewSettings}
+          >
+            ⚙️ Settings
           </button>
         </div>
       </header>
@@ -209,6 +219,10 @@ function App() {
             socket={socket}
             sessionId={sessionId}
           />
+        )}
+
+        {currentStep === 'settings' && (
+          <Settings />
         )}
       </main>
 

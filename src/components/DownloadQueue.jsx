@@ -1,23 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import Organizer from './Organizer';
 import './DownloadQueue.css';
 
 const DownloadQueue = ({ socket, sessionId }) => {
   const [queueData, setQueueData] = useState(null);
+  const [completedDownloads, setCompletedDownloads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showOrganizer, setShowOrganizer] = useState(false);
 
   useEffect(() => {
-    // Fetch initial queue data
+    // Fetch initial queue data and completed downloads
     fetchQueueData();
+    fetchCompletedDownloads();
 
     // Listen for room updates via WebSocket
     if (socket) {
       socket.on('roomsUpdate', (updatedRooms) => {
         // Find our room in the updated rooms
-        const ourRoom = updatedRooms.find(room => room.roomId === sessionId);
+        // If we have a sessionId, use it; otherwise find any room for this user
+        const ourRoom = sessionId
+          ? updatedRooms.find(room => room.roomId === sessionId)
+          : updatedRooms.find(room => room.roomId); // Get the first room (should be user's room)
+
         if (ourRoom) {
           setQueueData(ourRoom);
         }
+
+        // Refresh completed downloads when room updates
+        fetchCompletedDownloads();
       });
 
       return () => {
@@ -29,18 +40,44 @@ const DownloadQueue = ({ socket, sessionId }) => {
   const fetchQueueData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/rooms');
+
+      // If we have a sessionId, try to find the specific room
+      // Otherwise, get the user's persistent room
+      const endpoint = sessionId ? '/api/rooms' : '/api/my-room';
+      const response = await fetch(endpoint);
+
       if (!response.ok) {
         throw new Error('Failed to fetch queue data');
       }
+
       const data = await response.json();
-      // Find our room
-      const ourRoom = data.rooms.find(room => room.roomId === sessionId);
-      setQueueData(ourRoom || null);
+
+      if (sessionId) {
+        // Find our room from all rooms
+        const ourRoom = data.rooms.find(room => room.roomId === sessionId);
+        setQueueData(ourRoom || null);
+      } else {
+        // Use the user's persistent room
+        setQueueData(data.room);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCompletedDownloads = async () => {
+    try {
+      const response = await fetch('/api/completed-downloads');
+      if (!response.ok) {
+        throw new Error('Failed to fetch completed downloads');
+      }
+      const data = await response.json();
+      setCompletedDownloads(data.completedDownloads);
+    } catch (err) {
+      console.error('Error fetching completed downloads:', err);
+      // Don't set error state for this, just log it
     }
   };
 
@@ -72,6 +109,14 @@ const DownloadQueue = ({ socket, sessionId }) => {
   const getOverallProgress = () => {
     if (!queueData || queueData.totalRoms === 0) return 0;
     return Math.round(((queueData.completedRoms + queueData.failedRoms) / queueData.totalRoms) * 100);
+  };
+
+  const getCompletedDownloads = () => {
+    return completedDownloads;
+  };
+
+  const handleOrganizeDownloads = () => {
+    setShowOrganizer(true);
   };
 
   if (loading) {
@@ -114,6 +159,45 @@ const DownloadQueue = ({ socket, sessionId }) => {
         <div className="empty-queue">
           <p>🎮 Start by browsing and selecting ROMs to download</p>
         </div>
+
+        {/* Always show completed downloads section */}
+        {completedDownloads.length > 0 && (
+          <>
+            <div className="completed-downloads-section">
+              <h3>📁 Completed Downloads ({completedDownloads.length})</h3>
+              <div className="completed-downloads-list">
+                {completedDownloads.map((download, index) => (
+                  <div key={index} className="completed-download-item">
+                    <div className="download-icon">📄</div>
+                    <div className="download-details">
+                      <div className="download-name">{download.name}</div>
+                      <div className="download-info">
+                        <span className="download-size">{download.size}</span>
+                        <span className="download-date">{formatTime(download.completedAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="organize-section">
+              <button
+                onClick={handleOrganizeDownloads}
+                className="organize-downloads-button"
+              >
+                📦 Organize {completedDownloads.length} Completed Download{completedDownloads.length !== 1 ? 's' : ''}
+              </button>
+            </div>
+          </>
+        )}
+
+        {showOrganizer && (
+          <Organizer
+            completedDownloads={completedDownloads}
+            onClose={() => setShowOrganizer(false)}
+          />
+        )}
       </div>
     );
   }
@@ -225,6 +309,24 @@ const DownloadQueue = ({ socket, sessionId }) => {
           <span className="info-value">{formatTime(queueData.lastActivity)}</span>
         </div>
       </div>
+
+      {completedDownloads.length > 0 && (
+        <div className="organize-section">
+          <button
+            onClick={handleOrganizeDownloads}
+            className="organize-downloads-button"
+          >
+            📦 Organize {completedDownloads.length} Completed Download{completedDownloads.length !== 1 ? 's' : ''}
+          </button>
+        </div>
+      )}
+
+      {showOrganizer && (
+        <Organizer
+          completedDownloads={completedDownloads}
+          onClose={() => setShowOrganizer(false)}
+        />
+      )}
     </div>
   );
 };

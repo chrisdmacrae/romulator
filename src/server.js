@@ -5,7 +5,9 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import fs from 'fs-extra';
 import { RomDownloader } from './romDownloader.js';
+import { RomOrganizer } from './organizer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,6 +34,9 @@ const downloadRooms = new Map();
 
 // Store user rooms by user hash
 const userRooms = new Map();
+
+// Initialize organizer
+const organizer = new RomOrganizer();
 
 // Generate a unique user room ID based on IP and User-Agent
 function getUserRoomId(req) {
@@ -270,6 +275,81 @@ app.post('/api/download', async (req, res) => {
   }
 });
 
+// Organizer API endpoints
+app.get('/api/rulesets', async (req, res) => {
+  try {
+    const rulesets = await organizer.getRulesets();
+    res.json({ rulesets });
+  } catch (error) {
+    console.error('Error fetching rulesets:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/rulesets', async (req, res) => {
+  try {
+    const { name, extract, move, rename } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Ruleset name is required' });
+    }
+
+    const ruleset = { name, extract: !!extract, move, rename };
+    await organizer.addRuleset(ruleset);
+    res.json({ message: 'Ruleset created successfully', ruleset });
+  } catch (error) {
+    console.error('Error creating ruleset:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/rulesets/:name', async (req, res) => {
+  try {
+    const { name } = req.params;
+    const { extract, move, rename, newName } = req.body;
+
+    const updatedRuleset = {
+      name: newName || name,
+      extract: !!extract,
+      move,
+      rename
+    };
+
+    await organizer.updateRuleset(name, updatedRuleset);
+    res.json({ message: 'Ruleset updated successfully', ruleset: updatedRuleset });
+  } catch (error) {
+    console.error('Error updating ruleset:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/rulesets/:name', async (req, res) => {
+  try {
+    const { name } = req.params;
+    await organizer.deleteRuleset(name);
+    res.json({ message: 'Ruleset deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting ruleset:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/organize', async (req, res) => {
+  try {
+    const { rulesetName, filePaths } = req.body;
+
+    if (!rulesetName || !filePaths || !Array.isArray(filePaths)) {
+      return res.status(400).json({ error: 'Ruleset name and file paths are required' });
+    }
+
+    const results = await organizer.applyRulesetToMultiple(rulesetName, filePaths);
+    res.json({ message: 'Organization completed', results });
+  } catch (error) {
+    console.error('Error organizing files:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/rooms', (req, res) => {
   try {
     const rooms = Array.from(downloadRooms.entries()).map(([sessionId, room]) => ({
@@ -279,6 +359,105 @@ app.get('/api/rooms', (req, res) => {
     res.json({ rooms });
   } catch (error) {
     console.error('Error fetching rooms:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/my-room', async (req, res) => {
+  try {
+    const userRoomId = getOrCreateUserRoom(req);
+    const roomData = userRooms.get(userRoomId);
+
+    // Always scan downloads folder for completed downloads
+    const completedDownloads = await getCompletedDownloads();
+
+    if (roomData) {
+      res.json({
+        room: {
+          roomId: userRoomId,
+          ...roomData,
+          completedDownloads
+        }
+      });
+    } else {
+      // Even if no room data, still show completed downloads
+      res.json({
+        room: {
+          roomId: userRoomId,
+          totalRoms: 0,
+          completedRoms: 0,
+          failedRoms: 0,
+          currentRom: null,
+          status: 'idle',
+          createdAt: new Date().toISOString(),
+          lastActivity: new Date().toISOString(),
+          roms: [],
+          downloadHistory: [],
+          completedDownloads
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching user room:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Function to scan downloads folder and get completed downloads
+async function getCompletedDownloads() {
+  try {
+    const downloadsDir = path.join(__dirname, '../downloads');
+
+    // Ensure downloads directory exists
+    await fs.ensureDir(downloadsDir);
+
+    // Read all files in downloads directory
+    const files = await fs.readdir(downloadsDir);
+
+    const completedDownloads = [];
+
+    for (const file of files) {
+      const filePath = path.join(downloadsDir, file);
+      const stats = await fs.stat(filePath);
+
+      if (stats.isFile()) {
+        completedDownloads.push({
+          name: file,
+          filePath: filePath,
+          size: formatFileSize(stats.size),
+          completedAt: stats.mtime.toISOString(),
+          sizeBytes: stats.size
+        });
+      }
+    }
+
+    // Sort by completion time (newest first)
+    completedDownloads.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+    return completedDownloads;
+  } catch (error) {
+    console.error('Error reading downloads folder:', error);
+    return [];
+  }
+}
+
+// Helper function to format file size
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 B';
+
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+app.get('/api/completed-downloads', async (req, res) => {
+  try {
+    const completedDownloads = await getCompletedDownloads();
+    res.json({ completedDownloads });
+  } catch (error) {
+    console.error('Error fetching completed downloads:', error);
     res.status(500).json({ error: error.message });
   }
 });
