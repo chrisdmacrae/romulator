@@ -129,9 +129,10 @@ app.post('/api/scrape', async (req, res) => {
 app.post('/api/download', async (req, res) => {
   try {
     console.log('📥 Download request received');
-    const { sessionId, selectedRoms } = req.body;
+    const { sessionId, selectedRoms, ruleset } = req.body;
     console.log(`📋 Session ID: ${sessionId}`);
     console.log(`📦 Selected ROMs: ${selectedRoms?.length || 0}`);
+    console.log(`📋 Ruleset: ${ruleset || 'None'}`);
 
     if (!sessionId || !selectedRoms || !Array.isArray(selectedRoms)) {
       console.log('❌ Invalid request parameters');
@@ -163,6 +164,7 @@ app.post('/api/download', async (req, res) => {
     roomData.status = 'downloading';
     roomData.startTime = new Date().toISOString();
     roomData.lastActivity = new Date().toISOString();
+    roomData.ruleset = ruleset || null; // Store the optional ruleset
     roomData.roms = selectedRoms.map(rom => ({
       name: rom.name,
       size: rom.size,
@@ -212,6 +214,28 @@ app.post('/api/download', async (req, res) => {
         const filepath = await downloader.downloadSingleRom(rom);
         console.log(`✅ Successfully downloaded: ${rom.name} to ${filepath}`);
 
+        // Apply ruleset if specified
+        let organizationResult = null;
+        if (roomData.ruleset) {
+          try {
+            console.log(`📦 Applying ruleset "${roomData.ruleset}" to ${rom.name}`);
+            organizationResult = await organizer.applyRuleset(roomData.ruleset, filepath);
+            console.log(`✅ Successfully organized: ${rom.name}`);
+            if (organizationResult.movedFiles.length > 0) {
+              console.log(`📁 Files moved to: ${organizationResult.movedFiles.join(', ')}`);
+            }
+          } catch (orgError) {
+            console.error(`❌ Error applying ruleset to ${rom.name}:`, orgError.message);
+            organizationResult = {
+              ruleset: roomData.ruleset,
+              originalFile: filepath,
+              extractedFiles: [],
+              movedFiles: [],
+              errors: [orgError.message]
+            };
+          }
+        }
+
         // Update room data
         roomData.completedRoms++;
         if (romIndex !== -1) {
@@ -220,13 +244,19 @@ app.post('/api/download', async (req, res) => {
         roomData.downloadHistory.push({
           name: rom.name,
           status: 'success',
-          completedAt: new Date().toISOString()
+          completedAt: new Date().toISOString(),
+          originalPath: filepath,
+          organizationResult: organizationResult,
+          rulesetApplied: roomData.ruleset || null
         });
 
         // Emit success for this ROM
         io.to(socketRoom).emit('downloadComplete', {
           rom: rom.name,
-          status: 'success'
+          status: 'success',
+          originalPath: filepath,
+          organizationResult: organizationResult,
+          rulesetApplied: roomData.ruleset || null
         });
 
       } catch (error) {

@@ -74,7 +74,7 @@ function App() {
     setSelectedRoms(selected);
   };
 
-  const handleStartDownload = async () => {
+  const handleStartDownload = async (ruleset = null) => {
     if (selectedRoms.length === 0) {
       setError('Please select at least one ROM to download');
       return;
@@ -84,22 +84,29 @@ function App() {
     setError(null);
     setCurrentStep('downloading');
     setDownloadResults([]);
-    
+
     // Join the download room for real-time updates
     if (socket) {
       socket.emit('joinDownload', sessionId);
     }
 
     try {
+      const requestBody = {
+        sessionId,
+        selectedRoms,
+      };
+
+      // Add ruleset if provided
+      if (ruleset) {
+        requestBody.ruleset = ruleset;
+      }
+
       const response = await fetch('/api/download', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          sessionId,
-          selectedRoms,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {

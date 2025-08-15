@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import './RomTable.css';
 
 const RomTable = ({ roms, selectedRoms, onSelectionChange, onStartDownload, onReset, loading }) => {
@@ -6,6 +6,25 @@ const RomTable = ({ roms, selectedRoms, onSelectionChange, onStartDownload, onRe
   const [sortField, setSortField] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [selectAll, setSelectAll] = useState(false);
+  const [selectedRuleset, setSelectedRuleset] = useState('');
+  const [availableRulesets, setAvailableRulesets] = useState([]);
+
+  // Fetch available rulesets on component mount
+  useEffect(() => {
+    const fetchRulesets = async () => {
+      try {
+        const response = await fetch('/api/rulesets');
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableRulesets(data.rulesets || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch rulesets:', error);
+      }
+    };
+
+    fetchRulesets();
+  }, []);
 
   // Filter and sort ROMs
   const filteredAndSortedRoms = useMemo(() => {
@@ -196,8 +215,29 @@ const RomTable = ({ roms, selectedRoms, onSelectionChange, onStartDownload, onRe
       </div>
 
       <div className="download-section">
+        <div className="download-options">
+          <div className="ruleset-selection">
+            <label htmlFor="ruleset-select">
+              📦 Apply Ruleset (Optional):
+            </label>
+            <select
+              id="ruleset-select"
+              value={selectedRuleset}
+              onChange={(e) => setSelectedRuleset(e.target.value)}
+              className="ruleset-select"
+            >
+              <option value="">No ruleset - download only</option>
+              {availableRulesets.map((ruleset) => (
+                <option key={ruleset.name} value={ruleset.name}>
+                  {ruleset.name} - {ruleset.extract ? 'Extract & ' : ''}Move to {ruleset.move}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <button
-          onClick={onStartDownload}
+          onClick={() => onStartDownload(selectedRuleset)}
           disabled={selectedRoms.length === 0 || loading}
           className="download-button"
         >
@@ -209,6 +249,7 @@ const RomTable = ({ roms, selectedRoms, onSelectionChange, onStartDownload, onRe
           ) : (
             <>
               ⬇️ Download {selectedRoms.length} ROM{selectedRoms.length !== 1 ? 's' : ''}
+              {selectedRuleset && ` with ${selectedRuleset} ruleset`}
             </>
           )}
         </button>

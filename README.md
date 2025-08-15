@@ -10,26 +10,26 @@ A modern web-based ROM downloader with automated organization, built with React,
 
 ```bash
 # Using Docker Compose (Recommended)
-curl -O https://raw.githubusercontent.com/chrisdmacrae/rom-downloader/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/chrisdmacrae/romulator/main/docker-compose.yml
 docker-compose up -d
 ```
 
 ```bash
 # Using Docker Run
 docker run -d \
-  --name rom-downloader \
+  --name romulator \
   -p 3001:3001 \
   -v ./downloads:/app/downloads \
   -v ./config:/app/config \
   -v ./organized:/app/organized \
-  ghcr.io/chrisdmacrae/rom-downloader:latest
+  ghcr.io/chrisdmacrae/romulator:latest
 ```
 
 ### Available Images
 
-- `ghcr.io/chrisdmacrae/rom-downloader:latest` - Latest stable release
-- `ghcr.io/chrisdmacrae/rom-downloader:develop` - Development build
-- `ghcr.io/chrisdmacrae/rom-downloader:v1.0.0` - Specific version
+- `ghcr.io/chrisdmacrae/romulator:latest` - Latest stable release
+- `ghcr.io/chrisdmacrae/romulator:develop` - Development build
+- `ghcr.io/chrisdmacrae/romulator:v1.0.0` - Specific version
 
 ### Multi-Architecture Support
 

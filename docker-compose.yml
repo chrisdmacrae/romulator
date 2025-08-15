@@ -2,8 +2,7 @@ version: '3.8'
 
 services:
   rom-downloader:
-    image: ghcr.io/chrisdmacrae/rom-downloader:latest
-    container_name: rom-downloader
+    image: ghcr.io/chrisdmacrae/romulator:latest
     pull_policy: always
     restart: unless-stopped
     ports:

@@ -182,6 +182,41 @@
   text-align: center;
 }
 
+.download-options {
+  margin-bottom: 1.5rem;
+}
+
+.ruleset-selection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.ruleset-selection label {
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.95rem;
+}
+
+.ruleset-select {
+  padding: 0.75rem;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background: white;
+  color: #495057;
+  min-width: 300px;
+  max-width: 100%;
+}
+
+.ruleset-select:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+  outline: none;
+}
+
 .download-button {
   background: #28a745;
   color: white;
@@ -248,7 +283,11 @@
   .download-section {
     padding: 1rem;
   }
-  
+
+  .ruleset-select {
+    min-width: 250px;
+  }
+
   .download-button {
     width: 100%;
     font-size: 1rem;
