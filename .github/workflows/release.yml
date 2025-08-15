@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run client:build
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          # Generate changelog
+          if [ -n "$PREVIOUS_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)")
+          fi
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## Changes in this Release
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## Docker Images
+            
+            This release is available as Docker images:
+            
+            ```bash
+            # Pull the image
+            docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            
+            # Run with docker-compose
+            curl -O https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/docker-compose.yml
+            docker-compose up -d
+            ```
+            
+            ## Installation
+            
+            ### Using Docker Compose (Recommended)
+            
+            1. Download the docker-compose.yml file
+            2. Run `docker-compose up -d`
+            3. Access the application at http://localhost:3001
+            
+            ### Using Docker Run
+            
+            ```bash
+            docker run -d \
+              --name rom-downloader \
+              -p 3001:3001 \
+              -v ./downloads:/app/downloads \
+              -v ./config:/app/config \
+              -v ./organized:/app/organized \
+              ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ```
+            
+            ## What's New
+            
+            See the full changelog above for all changes in this release.
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+
+  notify-deployment:
+    needs: create-release
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+      - name: Notify successful release
+        run: |
+          echo "🎉 Release ${{ github.ref_name }} has been created successfully!"
+          echo "Docker image: ghcr.io/${{ github.repository }}:${{ github.ref_name }}"

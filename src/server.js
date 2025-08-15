@@ -14,15 +14,24 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = createServer(app);
+
+// Configure CORS origins
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ["http://localhost:3000", "http://localhost:3001"];
+
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: allowedOrigins,
     methods: ["GET", "POST"]
   }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../dist')));
 

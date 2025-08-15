@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  rom-downloader:
+    image: ghcr.io/chrisdmacrae/rom-downloader:latest
+    container_name: rom-downloader
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      # Downloads directory - where ROMs are saved
+      - ./downloads:/app/downloads
+      # Config directory - where rulesets are stored
+      - ./config:/app/config
+      # Organized directory - where organized ROMs are moved
+      - ./organized:/app/organized
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      # Playwright configuration
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+    networks:
+      - rom-downloader-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/rulesets', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  rom-downloader-network:
+    driver: bridge
+
+volumes:
+  downloads:
+    driver: local
+  config:
+    driver: local
+  organized:
+    driver: local

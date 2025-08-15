@@ -11,9 +11,9 @@ export class RomDownloader {
         this.browser = null;
         this.context = null;
         this.page = null;
-        this.downloadDir = options.downloadDir || './downloads';
+        this.downloadDir = options.downloadDir || process.env.DOWNLOADS_DIR || './downloads';
         this.headless = options.headless !== false;
-        this.timeout = options.timeout || 30000;
+        this.timeout = options.timeout || parseInt(process.env.DOWNLOAD_TIMEOUT) || 30000;
     }
 
     async init() {

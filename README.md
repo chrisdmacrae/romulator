@@ -1,6 +1,43 @@
 # ROM Downloader
 
-A Playwright-based tool for downloading ROMs from Myrient archive with interactive CLI selection.
+[![Build and Deploy](https://github.com/chrisdmacrae/rom-downloader/actions/workflows/docker-build-deploy.yml/badge.svg)](https://github.com/chrisdmacrae/rom-downloader/actions/workflows/docker-build-deploy.yml)
+[![Security Scan](https://github.com/chrisdmacrae/rom-downloader/actions/workflows/security-scan.yml/badge.svg)](https://github.com/chrisdmacrae/rom-downloader/actions/workflows/security-scan.yml)
+[![Docker Image](https://ghcr-badge.deta.dev/chrisdmacrae/rom-downloader/latest_tag?trim=major&label=latest)](https://github.com/chrisdmacrae/rom-downloader/pkgs/container/rom-downloader)
+
+A modern web-based ROM downloader with automated organization, built with React, Express, and Playwright.
+
+### Quick Start with Docker
+
+```bash
+# Using Docker Compose (Recommended)
+curl -O https://raw.githubusercontent.com/chrisdmacrae/rom-downloader/main/docker-compose.yml
+docker-compose up -d
+```
+
+```bash
+# Using Docker Run
+docker run -d \
+  --name rom-downloader \
+  -p 3001:3001 \
+  -v ./downloads:/app/downloads \
+  -v ./config:/app/config \
+  -v ./organized:/app/organized \
+  ghcr.io/chrisdmacrae/rom-downloader:latest
+```
+
+### Available Images
+
+- `ghcr.io/chrisdmacrae/rom-downloader:latest` - Latest stable release
+- `ghcr.io/chrisdmacrae/rom-downloader:develop` - Development build
+- `ghcr.io/chrisdmacrae/rom-downloader:v1.0.0` - Specific version
+
+### Multi-Architecture Support
+
+Images are available for:
+- `linux/amd64` (Intel/AMD x86_64)
+- `linux/arm64` (ARM64/Apple Silicon)
+
+For detailed Docker deployment instructions, see [DOCKER-DEPLOYMENT.md](DOCKER-DEPLOYMENT.md).
 
 ## Features
 
@@ -31,7 +68,7 @@ npm run install-browsers
 
 ## Usage
 
-### Basic Usage
+### Basic CLI Usage
 
 Download ROMs from a Myrient archive page:
 
@@ -58,6 +95,14 @@ npm start "https://example.com/roms" --timeout 60000
 - `-d, --download-dir <dir>` - Download directory (default: `./downloads`)
 - `--no-headless` - Run browser in visible mode for debugging
 - `-t, --timeout <ms>` - Page load timeout in milliseconds (default: 30000)
+
+## Basic Web Usage
+
+```bash
+npm run web:dev
+```
+
+The server will run on localhost:3001
 
 ## Example URLs
 
@@ -121,6 +166,22 @@ npm run install-browsers
 
 ### Permission Issues
 Make sure you have write permissions to the download directory.
+
+## 🚀 CI/CD Pipeline
+
+This project uses GitHub Actions for:
+
+- **Automated Testing**: Runs tests on every PR and push
+- **Multi-Platform Builds**: Builds Docker images for AMD64 and ARM64
+- **Security Scanning**: Vulnerability scanning with Trivy and CodeQL
+- **Automated Releases**: Creates releases with changelogs and Docker images
+- **Dependency Updates**: Automated dependency updates with Dependabot
+
+### Deployment Environments
+
+- **Development**: `develop` branch → `ghcr.io/chrisdmacrae/rom-downloader:develop`
+- **Production**: `main` branch → `ghcr.io/chrisdmacrae/rom-downloader:latest`
+- **Releases**: Git tags → `ghcr.io/chrisdmacrae/rom-downloader:v1.0.0`
 
 ## License
 
