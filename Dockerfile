@@ -1,5 +1,5 @@
 # Multi-stage build for ROM Downloader
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Install dependencies needed for Playwright
 RUN apk add --no-cache \
