@@ -23,10 +23,19 @@ export class RomDownloader {
         // Ensure download directory exists
         await fs.ensureDir(this.downloadDir);
 
-        // Launch browser
-        this.browser = await chromium.launch({
+        // Configure browser launch options
+        const launchOptions = {
             headless: this.headless
-        });
+        };
+
+        // Use system Chromium if specified via environment variable
+        if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) {
+            launchOptions.executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+            console.log(`🔧 Using system Chromium at: ${process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}`);
+        }
+
+        // Launch browser
+        this.browser = await chromium.launch(launchOptions);
 
         // Create browser context with download settings
         this.context = await this.browser.newContext({

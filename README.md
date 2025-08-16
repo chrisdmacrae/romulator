@@ -82,6 +82,15 @@ npm install
 npm run install-browsers
 ```
 
+### Docker Deployment
+
+For Docker deployment, the application is configured to use the system Chromium browser instead of downloading Playwright's bundled browsers. This is handled automatically through environment variables:
+
+- `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` - Prevents downloading Playwright browsers
+- `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser` - Points to system Chromium
+
+The Docker image includes the necessary Chromium installation and dependencies.
+
 ## Usage
 
 ### Basic CLI Usage

@@ -12,8 +12,8 @@ RUN apk add --no-cache \
     ttf-freefont
 
 # Set Playwright to use system Chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Set working directory
 WORKDIR /app
@@ -43,11 +43,11 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont \
     && addgroup -g 1001 -S nodejs \
-    && adduser -S nextjs -u 1001
+    && adduser -S romulator -u 1001
 
 # Set Playwright to use system Chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser \
     NODE_ENV=production
 
 # Set working directory
@@ -57,20 +57,23 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
+# Skip Playwright browser installation since we're using system Chromium
+# RUN npx playwright install --force
+
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src ./src
 RUN mkdir -p /app/downloads /app/config /app/organized
-RUN chown -R nextjs:nodejs /app/downloads /app/config /app/organized
+RUN chown -R romulator:nodejs /app/downloads /app/config /app/organized
 RUN touch /app/config/rulesets.yaml
-RUN chown -R nextjs:nodejs /app/config/rulesets.yaml
+RUN chown -R romulator:nodejs /app/config/rulesets.yaml
 
 # Create directories for volumes
 RUN mkdir -p /app/downloads /app/config /app/organized \
-    && chown -R nextjs:nodejs /app
+    && chown -R romulator:nodejs /app
 
 # Switch to non-root user
-USER nextjs
+USER romulator
 
 # Expose port
 EXPOSE 3001
