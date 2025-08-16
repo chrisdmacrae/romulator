@@ -20,6 +20,10 @@ services:
       # Playwright configuration
       - PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
       - PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      # Set user ID to match host user (adjust as needed)
+      - PUID=1000
+      - PGID=1000
+    user: "1000:1000"
     networks:
       - rom-downloader-network
     healthcheck:

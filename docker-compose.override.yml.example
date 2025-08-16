@@ -1,0 +1,38 @@
+# Docker Compose Override Example
+# Copy this file to docker-compose.override.yml and customize as needed
+# This file will automatically be used by docker-compose
+
+version: '3.8'
+
+services:
+  rom-downloader:
+    # Uncomment to use a local build instead of the published image
+    # build: .
+    
+    # Uncomment to enable development mode with hot reload
+    # volumes:
+    #   - ./src:/app/src
+    #   - ./dist:/app/dist
+    
+    # Custom environment variables
+    environment:
+      # Uncomment to enable debug logging
+      # - DEBUG=*
+      
+      # Uncomment to change download timeout (in milliseconds)
+      # - DOWNLOAD_TIMEOUT=60000
+      
+      # Uncomment to change downloads directory inside container
+      # - DOWNLOADS_DIR=/app/downloads
+      
+      # Custom user/group IDs (adjust to match your system)
+      - PUID=1000
+      - PGID=1000
+    
+    # Uncomment to expose additional ports
+    # ports:
+    #   - "3001:3001"
+    #   - "9229:9229"  # Node.js debug port
+    
+    # Uncomment for development debugging
+    # command: ["node", "--inspect=0.0.0.0:9229", "src/server.js"]

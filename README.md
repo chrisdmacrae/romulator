@@ -84,12 +84,58 @@ npm run install-browsers
 
 ### Docker Deployment
 
-For Docker deployment, the application is configured to use the system Chromium browser instead of downloading Playwright's bundled browsers. This is handled automatically through environment variables:
+#### Quick Start with Docker Compose
+
+1. **Setup directory permissions** (required for volume mounts):
+```bash
+./setup-permissions.sh
+```
+
+2. **Start the application**:
+```bash
+docker-compose up -d
+```
+
+3. **Access the application**:
+   - Open http://localhost:3001 in your browser
+   - Downloads will be saved to `./downloads/`
+   - Organized ROMs will be in `./organized/`
+   - Configuration files in `./config/`
+
+#### Docker Configuration
+
+The application is configured to use the system Chromium browser instead of downloading Playwright's bundled browsers:
 
 - `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` - Prevents downloading Playwright browsers
 - `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser` - Points to system Chromium
+- `PUID=1000` and `PGID=1000` - Set user/group IDs for proper file permissions
 
-The Docker image includes the necessary Chromium installation and dependencies.
+#### Volume Mounts
+
+The Docker Compose setup includes three volume mounts:
+- `./downloads:/app/downloads` - Downloaded ROM files
+- `./config:/app/config` - Configuration files and rulesets
+- `./organized:/app/organized` - Organized ROM files
+
+#### Troubleshooting Docker Permissions
+
+If you encounter permission issues:
+
+1. **Run the setup script**:
+```bash
+./setup-permissions.sh
+```
+
+2. **Manual permission fix**:
+```bash
+sudo chown -R $(id -u):$(id -g) downloads config organized
+chmod -R 755 downloads config organized
+```
+
+3. **Check container logs**:
+```bash
+docker-compose logs -f rom-downloader
+```
 
 ## Architecture
 
