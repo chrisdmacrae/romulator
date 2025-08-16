@@ -207,7 +207,8 @@ export class RomOrganizer {
 
             // Step 2: Move and rename files
             if (ruleset.move) {
-                const moveDir = path.resolve(ruleset.move);
+                const baseRomsDir = path.resolve("/app/organized");
+                const moveDir = path.resolve(baseRomsDir, ruleset.move);
                 await fs.ensureDir(moveDir);
 
                 for (const filePath of filesToProcess) {
