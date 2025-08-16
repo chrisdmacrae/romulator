@@ -1,0 +1,132 @@
+{
+  "sessionId": "shared-room",
+  "roms": [
+    {
+      "name": "3 Choume no Tama - Tama and Friends - 3 Choume Obake Panic!! (Japan).zip",
+      "size": "74.3 KiB",
+      "downloadUrl": "https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/3%20Choume%20no%20Tama%20-%20Tama%20and%20Friends%20-%203%20Choume%20Obake%20Panic%21%21%20%28Japan%29.zip",
+      "status": "success"
+    },
+    {
+      "name": "3-pun Yosou - Umaban Club (Japan).zip",
+      "size": "36.4 KiB",
+      "downloadUrl": "https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/3-pun%20Yosou%20-%20Umaban%20Club%20%28Japan%29.zip",
+      "status": "success"
+    },
+    {
+      "name": "4 in 1 (Europe) (4B-001, Sachen-Commin) (Unl).zip",
+      "size": "96.4 KiB",
+      "downloadUrl": "https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/4%20in%201%20%28Europe%29%20%284B-001%2C%20Sachen-Commin%29%20%28Unl%29.zip",
+      "status": "success"
+    },
+    {
+      "name": "4 in 1 (Europe) (4B-004, Sachen-Commin) (Unl).zip",
+      "size": "121.8 KiB",
+      "downloadUrl": "https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/4%20in%201%20%28Europe%29%20%284B-004%2C%20Sachen-Commin%29%20%28Unl%29.zip",
+      "status": "success"
+    },
+    {
+      "name": "4 in 1 (Europe) (4B-006, Sachen) (Unl).zip",
+      "size": "137.5 KiB",
+      "downloadUrl": "https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/4%20in%201%20%28Europe%29%20%284B-006%2C%20Sachen%29%20%28Unl%29.zip",
+      "status": "success"
+    },
+    {
+      "name": "Double Dribble - 5 on 5 (USA).zip",
+      "size": "65.9 KiB",
+      "downloadUrl": "https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/Double%20Dribble%20-%205%20on%205%20%28USA%29.zip",
+      "status": "success"
+    },
+    {
+      "name": "Double Dragon II (USA, Europe).zip",
+      "size": "71.3 KiB",
+      "downloadUrl": "https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/Double%20Dragon%20II%20%28USA%2C%20Europe%29.zip",
+      "status": "success"
+    },
+    {
+      "name": "Double Dragon 3 - The Arcade Game (USA, Europe).zip",
+      "size": "73.5 KiB",
+      "downloadUrl": "https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/Double%20Dragon%203%20-%20The%20Arcade%20Game%20%28USA%2C%20Europe%29.zip",
+      "status": "success"
+    },
+    {
+      "name": "Double Dragon (USA, Europe).zip",
+      "size": "67.1 KiB",
+      "downloadUrl": "https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/Double%20Dragon%20%28USA%2C%20Europe%29.zip",
+      "status": "success"
+    }
+  ],
+  "currentRom": null,
+  "downloadHistory": [
+    {
+      "name": "3 Choume no Tama - Tama and Friends - 3 Choume Obake Panic!! (Japan).zip",
+      "status": "success",
+      "completedAt": "2025-08-16T22:32:37.449Z",
+      "originalPath": "downloads/3 Choume no Tama - Tama and Friends - 3 Choume Obake Panic!! (Japan).zip",
+      "organizationResult": null
+    },
+    {
+      "name": "4 in 1 (Europe) (4B-001, Sachen-Commin) (Unl).zip",
+      "status": "success",
+      "completedAt": "2025-08-16T22:32:57.407Z",
+      "originalPath": "downloads/4 in 1 (Europe) (4B-001, Sachen-Commin) (Unl).zip",
+      "organizationResult": null
+    },
+    {
+      "name": "3-pun Yosou - Umaban Club (Japan).zip",
+      "status": "success",
+      "completedAt": "2025-08-16T22:33:04.742Z",
+      "originalPath": "downloads/3-pun Yosou - Umaban Club (Japan).zip",
+      "organizationResult": null
+    },
+    {
+      "name": "4 in 1 (Europe) (4B-004, Sachen-Commin) (Unl).zip",
+      "status": "success",
+      "completedAt": "2025-08-16T22:33:11.203Z",
+      "originalPath": "downloads/4 in 1 (Europe) (4B-004, Sachen-Commin) (Unl).zip",
+      "organizationResult": null
+    },
+    {
+      "name": "4 in 1 (Europe) (4B-006, Sachen) (Unl).zip",
+      "status": "success",
+      "completedAt": "2025-08-16T22:33:16.371Z",
+      "originalPath": "downloads/4 in 1 (Europe) (4B-006, Sachen) (Unl).zip",
+      "organizationResult": null
+    },
+    {
+      "name": "Double Dribble - 5 on 5 (USA).zip",
+      "status": "success",
+      "completedAt": "2025-08-16T22:33:22.274Z",
+      "originalPath": "downloads/Double Dribble - 5 on 5 (USA).zip",
+      "organizationResult": null
+    },
+    {
+      "name": "Double Dragon II (USA, Europe).zip",
+      "status": "success",
+      "completedAt": "2025-08-16T22:33:27.999Z",
+      "originalPath": "downloads/Double Dragon II (USA, Europe).zip",
+      "organizationResult": null
+    },
+    {
+      "name": "Double Dragon 3 - The Arcade Game (USA, Europe).zip",
+      "status": "success",
+      "completedAt": "2025-08-16T22:33:33.077Z",
+      "originalPath": "downloads/Double Dragon 3 - The Arcade Game (USA, Europe).zip",
+      "organizationResult": null
+    },
+    {
+      "name": "Double Dragon (USA, Europe).zip",
+      "status": "success",
+      "completedAt": "2025-08-16T22:33:38.041Z",
+      "originalPath": "downloads/Double Dragon (USA, Europe).zip",
+      "organizationResult": null
+    }
+  ],
+  "ruleset": null,
+  "lastActivity": "2025-08-16T22:41:01.964Z",
+  "createdAt": "2025-08-16T22:30:58.460Z",
+  "startTime": "2025-08-16T22:32:32.029Z",
+  "totalRoms": 9,
+  "completedRoms": 9,
+  "failedRoms": 0
+}

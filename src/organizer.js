@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const CONFIG_DIR = process.env.CONFIG_DIR || path.join(__dirname, '../config');
+const ORGANIZED_DIR = process.env.ORGANIZED_DIR || path.join(__dirname, '../organized');
 const RULESETS_FILE = path.join(CONFIG_DIR, 'rulesets.yaml');
 
 export class RomOrganizer {
@@ -25,19 +26,19 @@ export class RomOrganizer {
                     {
                         name: 'n64',
                         extract: true,
-                        move: './organized/n64',
+                        move: './n64',
                         rename: '{name}.z64'
                     },
                     {
                         name: 'psx',
                         extract: true,
-                        move: './organized/psx',
+                        move: './psx',
                         rename: '{name}.bin'
                     },
                     {
                         name: 'gba',
                         extract: true,
-                        move: './organized/gba',
+                        move: './gba',
                         rename: '{name}.gba'
                     }
                 ]
@@ -189,25 +190,28 @@ export class RomOrganizer {
             errors: []
         };
 
+        let extractPath = null;
+        let rulesetSuccessful = false;
+
         try {
             let filesToProcess = [romFilePath];
 
             // Step 1: Extract if needed
             if (ruleset.extract && path.extname(romFilePath).toLowerCase() === '.zip') {
                 console.log(`📦 Extracting ${romName}...`);
-                const extractPath = path.join(romDir, 'extracted', path.parse(romName).name);
+                extractPath = path.join(romDir, 'extracted', path.parse(romName).name);
                 await fs.ensureDir(extractPath);
-                
+
                 const extractedFiles = await this.extractArchive(romFilePath, extractPath);
                 results.extractedFiles = extractedFiles;
                 filesToProcess = extractedFiles;
-                
+
                 console.log(`✅ Extracted ${extractedFiles.length} files`);
             }
 
             // Step 2: Move and rename files
             if (ruleset.move) {
-                const baseRomsDir = path.resolve("/app/organized");
+                const baseRomsDir = path.resolve(ORGANIZED_DIR);
                 const moveDir = path.resolve(baseRomsDir, ruleset.move);
                 await fs.ensureDir(moveDir);
 
@@ -219,11 +223,11 @@ export class RomOrganizer {
                     if (ruleset.rename) {
                         const ext = path.extname(fileName);
                         const templateExt = path.extname(ruleset.rename);
-                        
+
                         // Use template extension if provided, otherwise keep original
                         const finalExt = templateExt || ext;
                         newFileName = this.formatFileName(ruleset.rename, fileName);
-                        
+
                         // Ensure the file has the correct extension
                         if (!newFileName.endsWith(finalExt)) {
                             newFileName += finalExt;
@@ -231,7 +235,7 @@ export class RomOrganizer {
                     }
 
                     const newFilePath = path.join(moveDir, newFileName);
-                    
+
                     console.log(`📁 Moving ${fileName} to ${newFilePath}`);
                     await fs.move(filePath, newFilePath, { overwrite: true });
                     results.movedFiles.push(newFilePath);
@@ -240,12 +244,35 @@ export class RomOrganizer {
                 console.log(`✅ Moved ${results.movedFiles.length} files to ${moveDir}`);
             }
 
+            // Mark ruleset as successful
+            rulesetSuccessful = true;
+
+            // Cleanup: Remove original zip file if ruleset was successful
+            if (rulesetSuccessful && path.extname(romFilePath).toLowerCase() === '.zip') {
+                console.log(`🗑️ Removing original zip file: ${romName}`);
+                await fs.remove(romFilePath);
+                console.log(`✅ Removed original zip file: ${romName}`);
+            }
+
             return results;
 
         } catch (error) {
             results.errors.push(error.message);
             console.error(`❌ Error applying ruleset '${rulesetName}':`, error);
+
+            // Cleanup will happen in finally block
             throw error;
+        } finally {
+            // Always cleanup extracted contents (whether success or failure)
+            if (extractPath && await fs.pathExists(extractPath)) {
+                try {
+                    console.log(`🗑️ Cleaning up extracted files from: ${extractPath}`);
+                    await fs.remove(extractPath);
+                    console.log(`✅ Cleaned up extracted files`);
+                } catch (cleanupError) {
+                    console.error(`❌ Failed to cleanup extracted files:`, cleanupError);
+                }
+            }
         }
     }
 

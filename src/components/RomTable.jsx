@@ -8,6 +8,7 @@ const RomTable = ({ roms, selectedRoms, onSelectionChange, onStartDownload, onRe
   const [selectAll, setSelectAll] = useState(false);
   const [selectedRuleset, setSelectedRuleset] = useState('');
   const [availableRulesets, setAvailableRulesets] = useState([]);
+  const [showRulesetPopup, setShowRulesetPopup] = useState(false);
 
   // Fetch available rulesets on component mount
   useEffect(() => {
@@ -107,6 +108,19 @@ const RomTable = ({ roms, selectedRoms, onSelectionChange, onStartDownload, onRe
     return sortDirection === 'asc' ? '↑' : '↓';
   };
 
+  const handleDownloadClick = () => {
+    setShowRulesetPopup(true);
+  };
+
+  const handleConfirmDownload = () => {
+    onStartDownload(selectedRuleset);
+    setShowRulesetPopup(false);
+  };
+
+  const handleCancelDownload = () => {
+    setShowRulesetPopup(false);
+  };
+
   return (
     <div className="rom-table-container">
       <div className="table-header">
@@ -114,7 +128,7 @@ const RomTable = ({ roms, selectedRoms, onSelectionChange, onStartDownload, onRe
           <h2>📋 ROM Collection ({filteredAndSortedRoms.length} ROMs)</h2>
           <div className="header-actions">
             <button onClick={onReset} className="reset-button">
-              ← Back to URL
+              ← Back to Browse
             </button>
           </div>
         </div>
@@ -134,13 +148,31 @@ const RomTable = ({ roms, selectedRoms, onSelectionChange, onStartDownload, onRe
             <span className="selected-count">
               {selectedRoms.length} selected
             </span>
-            <button
-              onClick={handleSelectAll}
-              className="select-all-button"
-              disabled={filteredAndSortedRoms.length === 0}
-            >
-              {selectAll ? 'Deselect All' : 'Select All'}
-            </button>
+            <div className="selection-actions">
+              <button
+                onClick={handleSelectAll}
+                className="select-all-button"
+                disabled={filteredAndSortedRoms.length === 0}
+              >
+                {selectAll ? 'Deselect All' : 'Select All'}
+              </button>
+              <button
+                onClick={handleDownloadClick}
+                disabled={selectedRoms.length === 0 || loading}
+                className="download-button-inline"
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Starting...
+                  </>
+                ) : (
+                  <>
+                    ⬇️ Download ROMs
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -214,46 +246,64 @@ const RomTable = ({ roms, selectedRoms, onSelectionChange, onStartDownload, onRe
         )}
       </div>
 
-      <div className="download-section">
-        <div className="download-options">
-          <div className="ruleset-selection">
-            <label htmlFor="ruleset-select">
-              📦 Apply Ruleset (Optional):
-            </label>
-            <select
-              id="ruleset-select"
-              value={selectedRuleset}
-              onChange={(e) => setSelectedRuleset(e.target.value)}
-              className="ruleset-select"
-            >
-              <option value="">No ruleset - download only</option>
-              {availableRulesets.map((ruleset) => (
-                <option key={ruleset.name} value={ruleset.name}>
-                  {ruleset.name} - {ruleset.extract ? 'Extract & ' : ''}Move to {ruleset.move}
-                </option>
-              ))}
-            </select>
+      {/* Ruleset Selection Popup */}
+      {showRulesetPopup && (
+        <div className="popup-overlay" onClick={handleCancelDownload}>
+          <div className="popup-content" onClick={(e) => e.stopPropagation()}>
+            <div className="popup-header">
+              <h3>📦 Download Options</h3>
+              <button className="popup-close" onClick={handleCancelDownload}>×</button>
+            </div>
+
+            <div className="popup-body">
+              <p>You're about to download <strong>{selectedRoms.length} ROM{selectedRoms.length !== 1 ? 's' : ''}</strong></p>
+
+              <div className="ruleset-selection">
+                <label htmlFor="ruleset-select">
+                  Apply Ruleset (Optional):
+                </label>
+                <select
+                  id="ruleset-select"
+                  value={selectedRuleset}
+                  onChange={(e) => setSelectedRuleset(e.target.value)}
+                  className="ruleset-select"
+                >
+                  <option value="">No ruleset - download only</option>
+                  {availableRulesets.map((ruleset) => (
+                    <option key={ruleset.name} value={ruleset.name}>
+                      {ruleset.name} - {ruleset.extract ? 'Extract & ' : ''}Move to {ruleset.move}
+                    </option>
+                  ))}
+                </select>
+                {selectedRuleset && (
+                  <p className="ruleset-description">
+                    This will {availableRulesets.find(r => r.name === selectedRuleset)?.extract ? 'extract and ' : ''}
+                    move files to: <strong>{availableRulesets.find(r => r.name === selectedRuleset)?.move}</strong>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="popup-footer">
+              <button onClick={handleCancelDownload} className="cancel-button">
+                Cancel
+              </button>
+              <button onClick={handleConfirmDownload} className="confirm-button" disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Starting Download...
+                  </>
+                ) : (
+                  <>
+                    ⬇️ Start Download
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
-
-        <button
-          onClick={() => onStartDownload(selectedRuleset)}
-          disabled={selectedRoms.length === 0 || loading}
-          className="download-button"
-        >
-          {loading ? (
-            <>
-              <span className="spinner"></span>
-              Starting Download...
-            </>
-          ) : (
-            <>
-              ⬇️ Download {selectedRoms.length} ROM{selectedRoms.length !== 1 ? 's' : ''}
-              {selectedRuleset && ` with ${selectedRuleset} ruleset`}
-            </>
-          )}
-        </button>
-      </div>
+      )}
     </div>
   );
 };
