@@ -60,6 +60,10 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src ./src
+RUN mkdir -p /app/downloads /app/config /app/organized
+RUN chown -R nextjs:nodejs /app/downloads /app/config /app/organized
+RUN touch /app/config/rulesets.yaml
+RUN chown -R nextjs:nodejs /app/config/rulesets.yaml
 
 # Create directories for volumes
 RUN mkdir -p /app/downloads /app/config /app/organized \

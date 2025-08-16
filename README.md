@@ -10,7 +10,23 @@ A modern web-based ROM downloader with automated organization, built with React,
 
 ```bash
 # Using Docker Compose (Recommended)
+mkdir romulator && cd romulator
 curl -O https://raw.githubusercontent.com/chrisdmacrae/romulator/main/docker-compose.yml
+```
+
+Then, edit the docker compose, updating the volumes to match your local paths:
+
+```yaml
+volumes:
+    # Downloads directory - where ROMs are saved
+    - ./downloads:/app/downloads
+    # Organized directory - where organized ROMs are moved
+    - ./organized:/app/organized
+```
+
+> replace `./downloads` and `./organized` with your local paths
+
+```bash
 docker-compose up -d
 ```
 
@@ -19,9 +35,9 @@ docker-compose up -d
 docker run -d \
   --name romulator \
   -p 3001:3001 \
-  -v ./downloads:/app/downloads \
+  -v ./path/to/downloads:/app/downloads \
   -v ./config:/app/config \
-  -v ./organized:/app/organized \
+  -v ./path/to/games:/app/organized \
   ghcr.io/chrisdmacrae/romulator:latest
 ```
 
