@@ -50,6 +50,9 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser \
     NODE_ENV=production
 
+# Set ownership of app directory
+RUN chown -R romulator /app
+
 # Set working directory
 WORKDIR /app
 
