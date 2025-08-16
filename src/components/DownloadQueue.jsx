@@ -203,6 +203,35 @@ const DownloadQueue = ({ socket, userRoomId }) => {
     }
   };
 
+  const handleCancelDownload = async (romName) => {
+    try {
+      console.log(`🚫 Cancelling download: ${romName}`);
+
+      const response = await fetch('/api/cancel-download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ romName })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cancel download');
+      }
+
+      const result = await response.json();
+      console.log(`✅ Download cancelled:`, result);
+
+      // Refresh queue data
+      fetchQueueData();
+
+    } catch (error) {
+      console.error('❌ Error cancelling download:', error);
+      alert(`Failed to cancel download: ${error.message}`);
+    }
+  };
+
   const handleRetryRom = async (romName) => {
     try {
       console.log(`🔄 Retrying ROM download: ${romName}`);
@@ -301,7 +330,15 @@ const DownloadQueue = ({ socket, userRoomId }) => {
             <div className="completed-downloads-section">
               <h3>📁 Completed Downloads ({completedDownloads.length})</h3>
               <div className="completed-downloads-list">
-                {completedDownloads.map((download, index) => (
+                {completedDownloads
+                  .slice() // Create a copy to avoid mutating the original array
+                  .sort((a, b) => {
+                    // Sort by completion date, newest first
+                    const aDate = new Date(a.completedAt || 0);
+                    const bDate = new Date(b.completedAt || 0);
+                    return bDate - aDate;
+                  })
+                  .map((download, index) => (
                   <div key={index} className="completed-download-item">
                     <div className="download-icon">📄</div>
                     <div className="download-details">
@@ -448,7 +485,36 @@ const DownloadQueue = ({ socket, userRoomId }) => {
         )}
 
         <div className="rom-list">
-          {(queueData.roms || []).map((rom, index) => (
+          {(queueData.roms || [])
+            .slice() // Create a copy to avoid mutating the original array
+            .sort((a, b) => {
+              // Define status priority (lower number = higher priority)
+              const statusPriority = {
+                'downloading': 1,
+                'available': 2,
+                'pending': 3,
+                'failed': 4,
+                'error': 4,
+                'needs-rescrape': 4,
+                'success': 5,
+                'complete': 5
+              };
+
+              // First sort by status priority
+              const aPriority = statusPriority[a.status] || 6;
+              const bPriority = statusPriority[b.status] || 6;
+
+              if (aPriority !== bPriority) {
+                return aPriority - bPriority;
+              }
+
+              // Within same status, show newest first (reverse order)
+              // Since ROMs are added to the end of the array, higher index = newer
+              const aIndex = queueData.roms.indexOf(a);
+              const bIndex = queueData.roms.indexOf(b);
+              return bIndex - aIndex;
+            })
+            .map((rom, index) => (
             <div key={index} className={`rom-item ${rom.status}`}>
               <div className="rom-icon">
                 {getStatusIcon(rom.status)}
@@ -467,6 +533,17 @@ const DownloadQueue = ({ socket, userRoomId }) => {
                 >
                   {rom.status}
                 </span>
+                {/* Show cancel button for downloading ROMs */}
+                {rom.status === 'downloading' && (
+                  <button
+                    onClick={() => handleCancelDownload(rom.name)}
+                    className="cancel-download-button"
+                    title="Cancel download"
+                  >
+                    🚫
+                  </button>
+                )}
+
                 {/* Show retry button for failed ROMs */}
                 {(rom.status === 'failed' || rom.status === 'error' || rom.status === 'needs-rescrape') && (
                   <button

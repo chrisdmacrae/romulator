@@ -2,6 +2,8 @@ import { chromium } from 'playwright';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import https from 'https';
+import http from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +17,8 @@ export class RomDownloader {
         this.headless = options.headless !== false;
         this.timeout = options.timeout || parseInt(process.env.DOWNLOAD_TIMEOUT) || 30000;
         this.progressCallback = options.progressCallback || null;
+        this.activeDownloads = new Map(); // Track active downloads for cancellation
+        this.cancelledDownloads = new Set(); // Track cancelled downloads
     }
 
     async init() {
@@ -25,7 +29,26 @@ export class RomDownloader {
 
         // Configure browser launch options
         const launchOptions = {
-            headless: this.headless
+            headless: this.headless,
+            // Add resource management for containerized environments
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-gpu',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-renderer-backgrounding',
+                '--disable-features=TranslateUI',
+                '--disable-ipc-flooding-protection',
+                // Memory management
+                '--memory-pressure-off',
+                '--max_old_space_size=512',
+                '--disable-extensions'
+            ]
         };
 
         // Use system Chromium if specified via environment variable
@@ -37,11 +60,8 @@ export class RomDownloader {
         // Launch browser
         this.browser = await chromium.launch(launchOptions);
 
-        // Create browser context with download settings
-        this.context = await this.browser.newContext({
-            acceptDownloads: true,
-            downloadsPath: path.resolve(this.downloadDir)
-        });
+        // Create browser context (no download settings needed for HTTP downloads)
+        this.context = await this.browser.newContext();
 
         this.page = await this.context.newPage();
 
@@ -432,6 +452,275 @@ export class RomDownloader {
                 throw new Error(`Download failed: ${error.message}. Fallback also failed: ${fallbackError.message}`);
             }
         }
+    }
+
+    async downloadSingleRomHTTP(rom) {
+        console.log(`🔄 Downloading ROM via HTTP: ${rom.name}`);
+
+        // Check if download is already cancelled
+        if (this.isDownloadCancelled(rom.name)) {
+            throw new Error(`Download cancelled: ${rom.name}`);
+        }
+
+        // Validate downloadUrl
+        if (!rom.downloadUrl) {
+            throw new Error(`Cannot download ROM without downloadUrl: ${rom.name}. Please re-scrape the ROM list to get updated download URLs.`);
+        }
+
+        console.log(`📍 Download URL: ${rom.downloadUrl}`);
+
+        const filename = rom.name;
+        const filepath = path.join(this.downloadDir, filename);
+
+        console.log(`📁 Download directory: ${this.downloadDir}`);
+        console.log(`📁 Download filename: ${filename}`);
+        console.log(`📁 Download filepath: ${filepath}`);
+
+        return new Promise((resolve, reject) => {
+            const url = new URL(rom.downloadUrl);
+            const protocol = url.protocol === 'https:' ? https : http;
+
+            // Initial progress
+            if (this.progressCallback) {
+                this.progressCallback({
+                    type: 'fileProgress',
+                    romName: rom.name,
+                    filename: filename,
+                    progress: 0,
+                    downloadedBytes: 0,
+                    totalBytes: null,
+                    status: 'downloading'
+                });
+            }
+
+            const request = protocol.get(rom.downloadUrl, (response) => {
+                // Check for cancellation before processing response
+                if (this.isDownloadCancelled(rom.name)) {
+                    response.destroy();
+                    return reject(new Error(`Download cancelled: ${rom.name}`));
+                }
+
+                // Handle redirects
+                if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+                    console.log(`🔄 Following redirect to: ${response.headers.location}`);
+
+                    // Update the downloadUrl and retry
+                    const redirectUrl = response.headers.location.startsWith('http')
+                        ? response.headers.location
+                        : new URL(response.headers.location, rom.downloadUrl).href;
+
+                    rom.downloadUrl = redirectUrl;
+                    return this.downloadSingleRomHTTP(rom).then(resolve).catch(reject);
+                }
+
+                if (response.statusCode !== 200) {
+                    return reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
+                }
+
+                const totalBytes = parseInt(response.headers['content-length']) || null;
+                let downloadedBytes = 0;
+                let lastProgressTime = 0;
+                let lastProgressBytes = 0;
+
+                console.log(`📊 Starting download - Total size: ${totalBytes ? (totalBytes / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}`);
+
+                // Create write stream
+                const fileStream = fs.createWriteStream(filepath);
+
+                // Track this download for cancellation
+                this.activeDownloads.set(rom.name, {
+                    request: request,
+                    fileStream: fileStream,
+                    filepath: filepath,
+                    response: response
+                });
+
+                // Track progress
+                response.on('data', (chunk) => {
+                    // Check for cancellation during download
+                    if (this.isDownloadCancelled(rom.name)) {
+                        response.destroy();
+                        fileStream.destroy();
+                        return;
+                    }
+
+                    downloadedBytes += chunk.length;
+
+                    // Throttle progress updates to avoid too many callbacks
+                    const now = Date.now();
+                    const shouldUpdate = (now - lastProgressTime > 500) || // Update every 500ms
+                                       (downloadedBytes - lastProgressBytes > 100 * 1024); // Or every 100KB
+
+                    if (this.progressCallback && shouldUpdate) {
+                        let progress;
+
+                        if (totalBytes && totalBytes > 0) {
+                            // Calculate percentage if total size is known
+                            const exactProgress = (downloadedBytes / totalBytes) * 100;
+
+                            // Use a more granular approach for better user experience
+                            if (exactProgress < 0.1) {
+                                // For very small progress, show as 1% to indicate activity
+                                progress = 1;
+                            } else if (exactProgress < 1) {
+                                // For small progress, round to nearest 0.5%
+                                progress = Math.max(1, Math.round(exactProgress * 2) / 2);
+                            } else {
+                                // For larger progress, round to whole numbers
+                                progress = Math.round(exactProgress);
+                            }
+
+                            // Ensure progress never exceeds 99% until complete
+                            progress = Math.min(99, progress);
+
+                            console.log(`📊 Progress: ${downloadedBytes}/${totalBytes} bytes = ${exactProgress.toFixed(3)}% -> ${progress}%`);
+                        } else {
+                            // Show indeterminate progress if total size is unknown
+                            // Use a logarithmic scale based on downloaded bytes to show activity
+                            const mbDownloaded = downloadedBytes / (1024 * 1024);
+                            progress = Math.min(95, Math.round(10 + (mbDownloaded * 2))); // Start at 10%, max 95%
+                            console.log(`📊 Progress (unknown size): ${mbDownloaded.toFixed(2)} MB = ${progress}%`);
+                        }
+
+                        this.progressCallback({
+                            type: 'fileProgress',
+                            romName: rom.name,
+                            filename: filename,
+                            progress: progress,
+                            downloadedBytes: downloadedBytes,
+                            totalBytes: totalBytes,
+                            status: 'downloading'
+                        });
+
+                        lastProgressTime = now;
+                        lastProgressBytes = downloadedBytes;
+                    }
+                });
+
+                response.on('end', () => {
+                    // Check for cancellation one final time
+                    if (this.isDownloadCancelled(rom.name)) {
+                        fs.unlink(filepath).catch(() => {}); // Clean up partial file
+                        this.activeDownloads.delete(rom.name);
+                        return reject(new Error(`Download cancelled: ${rom.name}`));
+                    }
+
+                    console.log(`✅ Download completed: ${rom.name}`);
+
+                    // Clean up tracking
+                    this.activeDownloads.delete(rom.name);
+
+                    if (this.progressCallback) {
+                        this.progressCallback({
+                            type: 'fileProgress',
+                            romName: rom.name,
+                            filename: filename,
+                            progress: 100,
+                            downloadedBytes: downloadedBytes,
+                            totalBytes: downloadedBytes,
+                            status: 'complete'
+                        });
+                    }
+
+                    resolve(filepath);
+                });
+
+                response.on('error', (error) => {
+                    console.error(`❌ Download stream error:`, error);
+                    fileStream.destroy();
+                    fs.unlink(filepath).catch(() => {}); // Clean up partial file
+                    this.activeDownloads.delete(rom.name); // Clean up tracking
+                    reject(error);
+                });
+
+                fileStream.on('error', (error) => {
+                    console.error(`❌ File write error:`, error);
+                    response.destroy();
+                    fs.unlink(filepath).catch(() => {}); // Clean up partial file
+                    this.activeDownloads.delete(rom.name); // Clean up tracking
+                    reject(error);
+                });
+
+                fileStream.on('finish', () => {
+                    console.log(`💾 File saved to: ${filepath}`);
+                });
+
+                // Pipe the response to file
+                response.pipe(fileStream);
+            });
+
+            request.on('error', (error) => {
+                console.error(`❌ Request error:`, error);
+                this.activeDownloads.delete(rom.name); // Clean up tracking
+                reject(error);
+            });
+
+            request.setTimeout(60000, () => {
+                request.destroy();
+                this.activeDownloads.delete(rom.name); // Clean up tracking
+                reject(new Error('Download timeout after 60 seconds'));
+            });
+        });
+    }
+
+    // Cancel a specific download
+    cancelDownload(romName) {
+        console.log(`🚫 Cancelling download: ${romName}`);
+
+        // Mark as cancelled
+        this.cancelledDownloads.add(romName);
+
+        // Get the active download info
+        const downloadInfo = this.activeDownloads.get(romName);
+        if (downloadInfo) {
+            // Destroy the HTTP request if it exists
+            if (downloadInfo.request) {
+                downloadInfo.request.destroy();
+                console.log(`🚫 HTTP request destroyed for: ${romName}`);
+            }
+
+            // Close the file stream if it exists
+            if (downloadInfo.fileStream) {
+                downloadInfo.fileStream.destroy();
+                console.log(`🚫 File stream destroyed for: ${romName}`);
+            }
+
+            // Clean up the partial file
+            if (downloadInfo.filepath) {
+                fs.unlink(downloadInfo.filepath).catch(err => {
+                    console.log(`⚠️ Could not delete partial file ${downloadInfo.filepath}:`, err.message);
+                });
+                console.log(`🗑️ Cleaning up partial file: ${downloadInfo.filepath}`);
+            }
+
+            // Remove from active downloads
+            this.activeDownloads.delete(romName);
+        }
+
+        // Emit cancellation progress
+        if (this.progressCallback) {
+            this.progressCallback({
+                type: 'fileProgress',
+                romName: romName,
+                filename: romName,
+                progress: 0,
+                downloadedBytes: 0,
+                totalBytes: null,
+                status: 'cancelled'
+            });
+        }
+
+        console.log(`✅ Download cancelled: ${romName}`);
+    }
+
+    // Check if a download is cancelled
+    isDownloadCancelled(romName) {
+        return this.cancelledDownloads.has(romName);
+    }
+
+    // Clear cancelled status (for retries)
+    clearCancelledStatus(romName) {
+        this.cancelledDownloads.delete(romName);
     }
 
     async close() {

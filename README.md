@@ -62,7 +62,7 @@ For detailed Docker deployment instructions, see [DOCKER-DEPLOYMENT.md](DOCKER-D
 - ⬇️ **Batch Downloads**: Download multiple ROMs with progress tracking
 - 🎨 **Colorful Output**: Beautiful CLI interface with colors and progress bars
 - 📁 **Organized Downloads**: Automatically creates download directory
-- ⚡ **Fast & Reliable**: Uses Playwright for robust web automation
+- ⚡ **Fast & Reliable**: Uses Playwright for web scraping and native HTTP for downloads
 
 ## Installation
 
@@ -90,6 +90,46 @@ For Docker deployment, the application is configured to use the system Chromium 
 - `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser` - Points to system Chromium
 
 The Docker image includes the necessary Chromium installation and dependencies.
+
+## Architecture
+
+### Download Method
+
+The application uses a hybrid approach:
+
+- **Web Scraping**: Playwright with Chromium for scraping ROM lists and extracting download URLs
+- **File Downloads**: Native Node.js HTTP/HTTPS requests for efficient, resource-friendly downloads
+
+This approach provides the best of both worlds:
+- Robust scraping of dynamic web content
+- Efficient downloads without browser overhead
+- Better resource management in containerized environments
+- Improved reliability and reduced memory usage
+
+## Troubleshooting
+
+### Socket Connection Errors
+
+If you encounter "xhr poll error" or Socket.IO connection issues:
+
+1. **Port Configuration**: Ensure the server is running on the correct port:
+   - Development: Server runs on port 3001, Vite dev server on port 3000
+   - Production/Docker: Server runs on port 3001 (mapped from container)
+
+2. **CORS Issues**: The application is configured to allow connections from:
+   - `http://localhost:3000` (Vite dev server)
+   - `http://localhost:3001` (Production server)
+   - `http://localhost:3002` (Legacy support)
+
+3. **Docker Networking**: When running in Docker, the frontend automatically detects the environment and connects to the appropriate endpoint.
+
+### Browser Launch Errors
+
+If you see "Failed to launch browser" errors in Docker:
+
+1. The application is configured to use system Chromium instead of Playwright's bundled browsers
+2. Environment variables `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser` handle this automatically
+3. The Docker image includes all necessary Chromium dependencies
 
 ## Usage
 

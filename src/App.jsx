@@ -140,10 +140,22 @@ function App() {
         console.log('🏠 Using shared room:', SHARED_ROOM_ID);
 
         // Initialize socket connection
-        const socketUrl = 'http://localhost:3002';
+        // In production/Docker, connect to the same origin
+        // In development, connect to the backend server port
+        const socketUrl = window.location.hostname === 'localhost' && window.location.port === '3000'
+          ? 'http://localhost:3001'  // Development: Vite dev server connecting to backend
+          : window.location.origin;  // Production/Docker: same origin
 
         console.log('🔌 Connecting to socket at:', socketUrl);
-        const newSocket = io(socketUrl);
+        const newSocket = io(socketUrl, {
+          transports: ['websocket', 'polling'],
+          timeout: 20000,
+          forceNew: true,
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionAttempts: 5,
+          maxReconnectionAttempts: 5
+        });
         setSocket(newSocket);
 
         // Handle socket connection

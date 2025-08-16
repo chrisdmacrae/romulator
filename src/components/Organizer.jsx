@@ -229,7 +229,15 @@ const Organizer = ({ completedDownloads, onClose }) => {
               </div>
             ) : (
               <div className="files-list">
-                {completedDownloads.map((download, index) => (
+                {completedDownloads
+                  .slice() // Create a copy to avoid mutating the original array
+                  .sort((a, b) => {
+                    // Sort by completion date, newest first
+                    const aDate = new Date(a.completedAt || 0);
+                    const bDate = new Date(b.completedAt || 0);
+                    return bDate - aDate;
+                  })
+                  .map((download, index) => (
                   <div 
                     key={index} 
                     className={`file-item ${selectedFiles.includes(download.filePath) ? 'selected' : ''}`}

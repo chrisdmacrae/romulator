@@ -18,13 +18,20 @@ const server = createServer(app);
 // Configure CORS origins
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
-  : ["http://localhost:3000", "http://localhost:3001"];
+  : ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"];
 
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  // Additional configuration for better connection reliability
+  transports: ['websocket', 'polling'],
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  upgradeTimeout: 30000,
+  allowEIO3: true
 });
 
 // Middleware
@@ -95,6 +102,7 @@ class RoomDownloadProcessor {
     this.isProcessing = false;
     this.currentDownload = null;
     this.downloader = null;
+    this.isCancelling = false;
   }
 
   // Start processing downloads for the room
@@ -182,8 +190,8 @@ class RoomDownloadProcessor {
       ...enhancedRoomData
     });
 
-    // Download the ROM
-    const filepath = await this.downloader.downloadSingleRom(rom);
+    // Download the ROM using HTTP instead of Playwright
+    const filepath = await this.downloader.downloadSingleRomHTTP(rom);
     console.log(`✅ Successfully downloaded: ${rom.name} to ${filepath}`);
 
     // Apply ruleset if specified
@@ -287,6 +295,48 @@ class RoomDownloadProcessor {
     if (this.downloader) {
       await this.downloader.close();
       this.downloader = null;
+    }
+  }
+
+  // Cancel a specific download
+  async cancelDownload(romName, roomData) {
+    console.log(`🚫 Cancelling download: ${romName}`);
+
+    try {
+      // Cancel in the downloader if it exists
+      if (this.downloader) {
+        this.downloader.cancelDownload(romName);
+      }
+
+      // Update ROM status in room data
+      const romIndex = roomData.roms.findIndex(r => r.name === romName);
+      if (romIndex !== -1) {
+        roomData.roms[romIndex].status = 'available'; // Reset to available for retry
+        console.log(`✅ ROM status reset to available: ${romName}`);
+      }
+
+      // If this was the current download, clear it
+      if (this.currentDownload && this.currentDownload.name === romName) {
+        this.currentDownload = null;
+        console.log(`✅ Cleared current download: ${romName}`);
+      }
+
+      // Update room state
+      roomData.lastActivity = new Date().toISOString();
+
+      // Emit room update to all connected clients
+      const enhancedRoomData = getEnhancedRoomData(roomData);
+      io.to(SHARED_ROOM_ID).emit('roomUpdate', {
+        roomId: SHARED_ROOM_ID,
+        ...enhancedRoomData
+      });
+
+      console.log(`✅ Download cancelled successfully: ${romName}`);
+      return true;
+
+    } catch (error) {
+      console.error(`❌ Error cancelling download ${romName}:`, error);
+      throw error;
     }
   }
 }
@@ -768,6 +818,40 @@ app.delete('/api/rom/:romName', (req, res) => {
   }
 });
 
+// Cancel a specific download
+app.post('/api/cancel-download', async (req, res) => {
+  try {
+    const { romName } = req.body;
+
+    if (!romName) {
+      return res.status(400).json({ error: 'ROM name is required' });
+    }
+
+    console.log(`🚫 API request to cancel download: ${romName}`);
+
+    // Use shared room
+    const roomData = sharedRoomData;
+
+    // Check if ROM exists in queue
+    const romIndex = roomData.roms.findIndex(r => r.name === romName);
+    if (romIndex === -1) {
+      return res.status(404).json({ error: 'ROM not found in queue' });
+    }
+
+    // Cancel the download
+    await downloadProcessor.cancelDownload(romName, roomData);
+
+    res.json({
+      message: 'Download cancelled successfully',
+      romName: romName
+    });
+
+  } catch (error) {
+    console.error('Error cancelling download:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Organizer API endpoints
 app.get('/api/rulesets', async (req, res) => {
   try {
@@ -1214,7 +1298,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
