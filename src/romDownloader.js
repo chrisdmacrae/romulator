@@ -52,6 +52,14 @@ export class RomDownloader {
             ]
         };
 
+        // Use system Chromium if specified via environment variable
+        if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) {
+            launchOptions.executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+            console.log(`🔧 Using system Chromium at: ${process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}`);
+        } else {
+            console.log('📦 Using bundled Chromium');
+        }
+
         console.log('🌐 Launching browser...');
         this.browser = await chromium.launch(launchOptions);
 
