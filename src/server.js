@@ -51,7 +51,17 @@ let sharedRoomData = {
   downloadHistory: [],
   ruleset: null,
   lastActivity: new Date().toISOString(),
-  createdAt: new Date().toISOString()
+  createdAt: new Date().toISOString(),
+  // Session statistics
+  sessionStats: {
+    totalBytesDownloaded: 0,
+    sessionStartTime: null,
+    currentDownloadSpeed: 0,
+    averageSessionSpeed: 0,
+    peakSpeed: 0,
+    activeDownloads: 0,
+    speedHistory: [] // Keep last 20 speed measurements
+  }
 };
 
 // Function to compute room status dynamically
@@ -129,9 +139,17 @@ class RoomDownloadProcessor {
           headless: true,
           timeout: 30000,
           progressCallback: (progressData) => {
-            // Emit progress to the shared room
-            console.log(`📊 Downloader emitting progress to shared room:`, progressData);
-            io.to(SHARED_ROOM_ID).emit('fileProgress', progressData);
+            // Update session statistics
+            this.updateSessionStats(progressData, roomData);
+
+            // Emit progress to the shared room with session stats
+            const enhancedProgressData = {
+              ...progressData,
+              sessionStats: roomData.sessionStats
+            };
+
+            console.log(`📊 Downloader emitting progress to shared room:`, enhancedProgressData);
+            io.to(SHARED_ROOM_ID).emit('fileProgress', enhancedProgressData);
           }
         });
 
@@ -253,19 +271,31 @@ class RoomDownloadProcessor {
     // Update ROM status in room
     const romIndex = roomData.roms.findIndex(r => r.name === rom.name);
     if (romIndex !== -1) {
-      // Check if this is a missing downloadUrl error
+      // Check error type and set appropriate status
       if (error.message.includes('downloadUrl') || error.message.includes('re-scrape')) {
         roomData.roms[romIndex].status = 'needs-rescrape';
         console.log(`🔄 Marked ROM as needing re-scrape: ${rom.name}`);
+      } else if (error.message.includes('Corrupted') || error.message.includes('Z_DATA_ERROR') || error.message.includes('invalid stored block lengths')) {
+        roomData.roms[romIndex].status = 'corrupted';
+        console.log(`💥 Marked ROM as corrupted (needs re-download): ${rom.name}`);
       } else {
         roomData.roms[romIndex].status = 'failed';
       }
     }
 
     roomData.downloadHistory = roomData.downloadHistory || [];
+
+    // Determine status for history
+    let historyStatus = 'failed';
+    if (error.message.includes('downloadUrl') || error.message.includes('re-scrape')) {
+      historyStatus = 'needs-rescrape';
+    } else if (error.message.includes('Corrupted') || error.message.includes('Z_DATA_ERROR') || error.message.includes('invalid stored block lengths')) {
+      historyStatus = 'corrupted';
+    }
+
     roomData.downloadHistory.push({
       name: rom.name,
-      status: error.message.includes('downloadUrl') ? 'needs-rescrape' : 'failed',
+      status: historyStatus,
       completedAt: new Date().toISOString(),
       error: error.message
     });
@@ -338,6 +368,71 @@ class RoomDownloadProcessor {
       console.error(`❌ Error cancelling download ${romName}:`, error);
       throw error;
     }
+  }
+
+  // Update session-level statistics
+  updateSessionStats(progressData, roomData) {
+    if (!roomData.sessionStats) {
+      roomData.sessionStats = {
+        totalBytesDownloaded: 0,
+        sessionStartTime: null,
+        currentDownloadSpeed: 0,
+        averageSessionSpeed: 0,
+        peakSpeed: 0,
+        activeDownloads: 0,
+        speedHistory: []
+      };
+    }
+
+    const stats = roomData.sessionStats;
+    const now = new Date();
+
+    // Initialize session start time if not set
+    if (!stats.sessionStartTime) {
+      stats.sessionStartTime = now.toISOString();
+    }
+
+    // Update current download speed and peak speed
+    if (progressData.currentSpeed) {
+      stats.currentDownloadSpeed = progressData.currentSpeed;
+
+      // Track peak speed
+      if (progressData.currentSpeed > stats.peakSpeed) {
+        stats.peakSpeed = progressData.currentSpeed;
+      }
+
+      // Add to speed history for session average calculation
+      stats.speedHistory.push({
+        speed: progressData.currentSpeed,
+        timestamp: now.toISOString(),
+        bytes: progressData.downloadedBytes
+      });
+
+      // Keep only last 50 measurements
+      if (stats.speedHistory.length > 50) {
+        stats.speedHistory.shift();
+      }
+
+      // Calculate session average speed
+      if (stats.speedHistory.length > 0) {
+        const totalSpeed = stats.speedHistory.reduce((sum, entry) => sum + entry.speed, 0);
+        stats.averageSessionSpeed = totalSpeed / stats.speedHistory.length;
+      }
+    }
+
+    // Count active downloads
+    const activeDownloads = roomData.roms.filter(rom => rom.status === 'downloading').length;
+    stats.activeDownloads = activeDownloads;
+
+    // Update total bytes downloaded (this is cumulative across all completed downloads)
+    const completedRoms = roomData.roms.filter(rom => rom.status === 'success');
+    stats.totalBytesDownloaded = completedRoms.reduce((total, rom) => {
+      // We don't have individual ROM sizes in the room data, so we'll estimate
+      // or we could track this differently
+      return total;
+    }, 0);
+
+    console.log(`📊 Session stats updated: Speed: ${(stats.currentDownloadSpeed / 1024 / 1024).toFixed(2)} MB/s, Peak: ${(stats.peakSpeed / 1024 / 1024).toFixed(2)} MB/s, Active: ${stats.activeDownloads}`);
   }
 }
 
@@ -658,7 +753,7 @@ app.post('/api/download', async (req, res) => {
     const newRoms = selectedRoms.map(rom => ({
       name: rom.name,
       size: rom.size,
-      downloadUrl: rom.downloadUrl, // Preserve downloadUrl
+      downloadUrl: rom.downloadUrl || rom.url, // Use downloadUrl if available, fallback to url
       status: 'available' // Mark as available for processing
     }));
 
@@ -726,8 +821,25 @@ app.post('/api/rom/:romName/retry', async (req, res) => {
     const rom = roomData.roms[romIndex];
 
     // Only allow retry for failed ROMs
-    if (!['failed', 'error', 'needs-rescrape'].includes(rom.status)) {
+    if (!['failed', 'error', 'needs-rescrape', 'corrupted'].includes(rom.status)) {
       return res.status(400).json({ error: 'Can only retry failed downloads' });
+    }
+
+    // If the ROM is corrupted, try to clean up the corrupted file
+    if (rom.status === 'corrupted') {
+      const downloadsDir = process.env.DOWNLOADS_DIR || './downloads';
+      const corruptedFilePath = path.join(downloadsDir, romName);
+
+      try {
+        if (await fs.pathExists(corruptedFilePath)) {
+          console.log(`🗑️ Removing corrupted file: ${corruptedFilePath}`);
+          await fs.remove(corruptedFilePath);
+          console.log(`✅ Corrupted file removed: ${romName}`);
+        }
+      } catch (cleanupError) {
+        console.warn(`⚠️ Could not remove corrupted file ${romName}:`, cleanupError.message);
+        // Continue with retry even if cleanup fails
+      }
     }
 
     // Reset ROM status to available for retry

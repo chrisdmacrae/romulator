@@ -120,47 +120,102 @@ export class RomOrganizer {
 
     async extractArchive(archivePath, extractPath) {
         return new Promise((resolve, reject) => {
-            yauzl.open(archivePath, { lazyEntries: true }, (err, zipfile) => {
-                if (err) {
-                    reject(err);
+            // First, check if the file exists and has a reasonable size
+            fs.stat(archivePath, (statErr, stats) => {
+                if (statErr) {
+                    reject(new Error(`Archive file not found: ${archivePath}`));
                     return;
                 }
 
-                const extractedFiles = [];
+                if (stats.size === 0) {
+                    reject(new Error(`Archive file is empty: ${archivePath}`));
+                    return;
+                }
 
-                zipfile.readEntry();
-                zipfile.on('entry', (entry) => {
-                    if (/\/$/.test(entry.fileName)) {
-                        // Directory entry
-                        zipfile.readEntry();
-                    } else {
-                        // File entry
-                        zipfile.openReadStream(entry, (err, readStream) => {
-                            if (err) {
-                                reject(err);
-                                return;
-                            }
+                console.log(`📊 Archive size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
 
-                            const filePath = path.join(extractPath, entry.fileName);
-                            fs.ensureDir(path.dirname(filePath)).then(() => {
-                                const writeStream = fs.createWriteStream(filePath);
-                                readStream.pipe(writeStream);
-                                
-                                writeStream.on('close', () => {
-                                    extractedFiles.push(filePath);
-                                    zipfile.readEntry();
-                                });
-                            });
-                        });
+                yauzl.open(archivePath, { lazyEntries: true }, (err, zipfile) => {
+                    if (err) {
+                        // Handle specific ZIP corruption errors
+                        if (err.code === 'Z_DATA_ERROR' || err.message.includes('invalid stored block lengths')) {
+                            reject(new Error(`Corrupted ZIP file: ${path.basename(archivePath)}. The download may have been incomplete or the file is damaged.`));
+                        } else {
+                            reject(new Error(`Failed to open ZIP file: ${err.message}`));
+                        }
+                        return;
                     }
-                });
 
-                zipfile.on('end', () => {
-                    resolve(extractedFiles);
-                });
+                    const extractedFiles = [];
+                    let hasError = false;
 
-                zipfile.on('error', (err) => {
-                    reject(err);
+                    zipfile.readEntry();
+                    zipfile.on('entry', (entry) => {
+                        if (hasError) return;
+
+                        if (/\/$/.test(entry.fileName)) {
+                            // Directory entry
+                            zipfile.readEntry();
+                        } else {
+                            // File entry
+                            zipfile.openReadStream(entry, (err, readStream) => {
+                                if (err) {
+                                    hasError = true;
+                                    if (err.code === 'Z_DATA_ERROR') {
+                                        reject(new Error(`Corrupted data in ZIP file: ${path.basename(archivePath)}`));
+                                    } else {
+                                        reject(err);
+                                    }
+                                    return;
+                                }
+
+                                const filePath = path.join(extractPath, entry.fileName);
+                                fs.ensureDir(path.dirname(filePath)).then(() => {
+                                    const writeStream = fs.createWriteStream(filePath);
+
+                                    // Handle stream errors
+                                    readStream.on('error', (streamErr) => {
+                                        hasError = true;
+                                        writeStream.destroy();
+                                        if (streamErr.code === 'Z_DATA_ERROR') {
+                                            reject(new Error(`Corrupted data while extracting: ${entry.fileName}`));
+                                        } else {
+                                            reject(streamErr);
+                                        }
+                                    });
+
+                                    writeStream.on('error', (writeErr) => {
+                                        hasError = true;
+                                        readStream.destroy();
+                                        reject(writeErr);
+                                    });
+
+                                    readStream.pipe(writeStream);
+
+                                    writeStream.on('close', () => {
+                                        if (!hasError) {
+                                            extractedFiles.push(filePath);
+                                            zipfile.readEntry();
+                                        }
+                                    });
+                                }).catch(reject);
+                            });
+                        }
+                    });
+
+                    zipfile.on('end', () => {
+                        if (!hasError) {
+                            resolve(extractedFiles);
+                        }
+                    });
+
+                    zipfile.on('error', (err) => {
+                        hasError = true;
+                        if (err.code === 'Z_DATA_ERROR' || err.message.includes('invalid stored block lengths')) {
+                            reject(new Error(`ZIP file corruption detected: ${path.basename(archivePath)}. Please re-download the file.`));
+                        } else {
+                            reject(err);
+                        }
+                    });
                 });
             });
         });

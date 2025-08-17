@@ -140,6 +140,7 @@ const DownloadQueue = ({ socket, userRoomId }) => {
       case 'available': return '📄';
       case 'complete': return '✅';
       case 'needs-rescrape': return '🔄';
+      case 'corrupted': return '💥';
       default: return '❓';
     }
   };
@@ -154,6 +155,7 @@ const DownloadQueue = ({ socket, userRoomId }) => {
       case 'available': return '#6c757d';
       case 'complete': return '#28a745';
       case 'needs-rescrape': return '#fd7e14';
+      case 'corrupted': return '#e83e8c';
       default: return '#6c757d';
     }
   };
@@ -168,6 +170,34 @@ const DownloadQueue = ({ socket, userRoomId }) => {
     const completed = queueData.completedRoms || 0;
     const failed = queueData.failedRoms || 0;
     return Math.round(((completed + failed) / queueData.totalRoms) * 100);
+  };
+
+  const formatSpeed = (bytesPerSecond) => {
+    if (!bytesPerSecond || bytesPerSecond === 0) return 'N/A';
+
+    const mbps = bytesPerSecond / (1024 * 1024);
+    if (mbps >= 1) {
+      return `${mbps.toFixed(2)} MB/s`;
+    } else {
+      const kbps = bytesPerSecond / 1024;
+      return `${kbps.toFixed(1)} KB/s`;
+    }
+  };
+
+  const formatETA = (seconds) => {
+    if (!seconds || seconds <= 0) return null;
+
+    if (seconds < 60) {
+      return `${Math.round(seconds)}s`;
+    } else if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.round(seconds % 60);
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    } else {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      return `${hours}h ${minutes}m`;
+    }
   };
 
   const getCompletedDownloads = () => {
@@ -414,6 +444,39 @@ const DownloadQueue = ({ socket, userRoomId }) => {
             </div>
           </div>
         </div>
+
+        {/* Session Statistics */}
+        {queueData.sessionStats && (
+          <div className="session-stats">
+            <h4>📊 Session Statistics</h4>
+            <div className="session-stats-grid">
+              <div className="session-stat">
+                <span className="session-stat-label">Current Speed:</span>
+                <span className="session-stat-value">
+                  {formatSpeed(queueData.sessionStats.currentDownloadSpeed)}
+                </span>
+              </div>
+              <div className="session-stat">
+                <span className="session-stat-label">Average Speed:</span>
+                <span className="session-stat-value">
+                  {formatSpeed(queueData.sessionStats.averageSessionSpeed)}
+                </span>
+              </div>
+              <div className="session-stat">
+                <span className="session-stat-label">Peak Speed:</span>
+                <span className="session-stat-value">
+                  {formatSpeed(queueData.sessionStats.peakSpeed)}
+                </span>
+              </div>
+              <div className="session-stat">
+                <span className="session-stat-label">Active Downloads:</span>
+                <span className="session-stat-value">
+                  {queueData.sessionStats.activeDownloads || 0}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {queueData.currentRom && (
@@ -444,11 +507,30 @@ const DownloadQueue = ({ socket, userRoomId }) => {
                     ></div>
                   </div>
                   <div className="progress-status">
-                    {fileProgress && fileProgress.downloadedBytes ? (
-                      fileProgress.totalBytes ?
-                        `${(fileProgress.downloadedBytes / (1024 * 1024)).toFixed(1)} MB / ${(fileProgress.totalBytes / (1024 * 1024)).toFixed(1)} MB` :
-                        `Downloaded ${(fileProgress.downloadedBytes / (1024 * 1024)).toFixed(1)} MB`
-                    ) : 'Preparing download...'}
+                    <div className="progress-size">
+                      {fileProgress && fileProgress.downloadedBytes ? (
+                        fileProgress.totalBytes ?
+                          `${(fileProgress.downloadedBytes / (1024 * 1024)).toFixed(1)} MB / ${(fileProgress.totalBytes / (1024 * 1024)).toFixed(1)} MB` :
+                          `Downloaded ${(fileProgress.downloadedBytes / (1024 * 1024)).toFixed(1)} MB`
+                      ) : 'Preparing download...'}
+                    </div>
+                    {fileProgress && fileProgress.currentSpeed && (
+                      <div className="progress-speed">
+                        <span className="speed-current">
+                          📊 {formatSpeed(fileProgress.currentSpeed)}
+                          {fileProgress.chunks && fileProgress.chunks > 1 && (
+                            <span className="parallel-indicator">
+                              ⚡ {fileProgress.chunks} workers
+                            </span>
+                          )}
+                        </span>
+                        {fileProgress.eta && formatETA(fileProgress.eta) && (
+                          <span className="speed-eta">
+                            • ETA: {formatETA(fileProgress.eta)}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -545,13 +627,13 @@ const DownloadQueue = ({ socket, userRoomId }) => {
                 )}
 
                 {/* Show retry button for failed ROMs */}
-                {(rom.status === 'failed' || rom.status === 'error' || rom.status === 'needs-rescrape') && (
+                {(rom.status === 'failed' || rom.status === 'error' || rom.status === 'needs-rescrape' || rom.status === 'corrupted') && (
                   <button
                     onClick={() => handleRetryRom(rom.name)}
                     className="retry-rom-button"
-                    title="Retry download"
+                    title={rom.status === 'corrupted' ? 'Re-download corrupted file' : 'Retry download'}
                   >
-                    🔄
+                    {rom.status === 'corrupted' ? '💥' : '🔄'}
                   </button>
                 )}
 

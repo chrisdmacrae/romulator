@@ -180,21 +180,27 @@ function App() {
         newSocket.on('roomUpdate', (roomData) => {
           console.log('📊 Received room update:', roomData);
 
-          // Calculate queue count from room data
-          let activeItems = 0;
-          if (roomData.status === 'downloading' && roomData.roms) {
-            activeItems = roomData.roms.filter(rom =>
-              rom.status === 'downloading' || rom.status === 'organizing'
+          // Calculate queue count from room data - count all non-complete items
+          let queuedItems = 0;
+          if (roomData.roms && Array.isArray(roomData.roms)) {
+            // Count all ROMs that are not complete (pending, downloading, failed, etc.)
+            queuedItems = roomData.roms.filter(rom =>
+              rom.status !== 'complete' && rom.status !== 'success'
             ).length;
-
-            // If no individual ROM status, count the current ROM
-            if (activeItems === 0 && roomData.currentRom) {
-              activeItems = 1;
-            }
+          } else if (roomData.totalRoms && roomData.completedRoms) {
+            // Fallback: calculate from totals if individual ROM data not available
+            queuedItems = roomData.totalRoms - roomData.completedRoms;
+          } else if (roomData.currentRom) {
+            // Fallback: if there's a current ROM, assume at least 1 item in queue
+            queuedItems = 1;
           }
 
-          console.log('📊 Calculated active items:', activeItems);
-          setQueueCount(activeItems);
+          console.log('📊 Calculated queued items:', queuedItems, 'from room data:', {
+            totalRoms: roomData.totalRoms,
+            completedRoms: roomData.completedRoms,
+            romsArray: roomData.roms?.length
+          });
+          setQueueCount(queuedItems);
         });
 
         // Listen for download progress updates

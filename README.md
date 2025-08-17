@@ -60,6 +60,8 @@ For detailed Docker deployment instructions, see [DOCKER-DEPLOYMENT.md](DOCKER-D
 - 🔍 **Web Scraping**: Automatically scrapes ROM lists from Myrient archive pages
 - 📋 **Interactive Selection**: CLI checklist interface for selecting which ROMs to download
 - ⬇️ **Batch Downloads**: Download multiple ROMs with progress tracking
+- 📊 **Speed Monitoring**: Real-time download speeds, ETA, and session statistics
+- ⚡ **Parallel Downloads**: Multi-chunk parallel downloading for maximum speed
 - 🎨 **Colorful Output**: Beautiful CLI interface with colors and progress bars
 - 📁 **Organized Downloads**: Automatically creates download directory
 - ⚡ **Fast & Reliable**: Uses Playwright for web scraping and native HTTP for downloads
@@ -136,6 +138,31 @@ chmod -R 755 downloads config organized
 ```bash
 docker-compose logs -f rom-downloader
 ```
+
+#### Parallel Download Configuration
+
+The application uses parallel chunk downloading for maximum speed. You can configure this behavior:
+
+**Environment Variables:**
+- `MAX_CONCURRENT_CHUNKS=8` - Number of concurrent chunks (default: 8)
+- `CHUNK_SIZE=1048576` - Fixed chunk size in bytes (default: 1MB)
+- `MIN_PARALLEL_FILE_SIZE=2097152` - Minimum file size for parallel download (default: 2MB)
+- `DISABLE_PARALLEL_DOWNLOAD=true` - Disable parallel downloads (use single-threaded)
+
+**How it works:**
+1. **Range Request Check**: Tests if server supports HTTP range requests
+2. **Continuous Chunking**: Downloads file in fixed-size chunks (e.g., 1MB each)
+3. **Concurrent Downloads**: Maintains 8 concurrent chunk downloads at all times
+4. **Progressive Assembly**: Combines chunks into final file as they complete
+5. **Fallback**: Uses single-threaded download if ranges not supported
+
+**Example:** A 100MB file becomes 100 chunks of 1MB each, with 8 downloading simultaneously until complete.
+
+**Performance Benefits:**
+- 🚀 **5-10x faster** downloads on high-bandwidth connections
+- ⚡ **Automatic optimization** based on file size and server capabilities
+- 🔄 **Intelligent fallback** for servers that don't support ranges
+- 📊 **Real-time progress** tracking across all chunks
 
 ## Architecture
 

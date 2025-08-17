@@ -20,6 +20,16 @@ services:
       # Playwright configuration
       - PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
       - PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      # Download optimization
+      - DOWNLOAD_TIMEOUT=300000
+      - UV_THREADPOOL_SIZE=16
+      # Parallel download configuration (conservative settings)
+      - MAX_CONCURRENT_CHUNKS=3          # Conservative: 3 concurrent chunks
+      - CHUNK_SIZE=262144                # Conservative: 256KB chunk size
+      - MIN_PARALLEL_FILE_SIZE=2097152   # 2MB minimum for parallel download
+      # - DISABLE_PARALLEL_DOWNLOAD=true  # Uncomment to disable parallel downloads
+      # Node.js performance optimization with memory limits
+      - NODE_OPTIONS="--max-old-space-size=1024 --optimize-for-size"
       # Set user ID to match host user (adjust as needed)
       - PUID=1000
       - PGID=1000

@@ -1,0 +1,370 @@
+{
+  "sessionId": "shared-room",
+  "roms": [
+    {
+      "name": "Dark Cloud (USA).zip",
+      "size": null,
+      "downloadUrl": "https://myrient.erista.me/files/Redump/Sony%20-%20PlayStation%202/Dark%20Cloud%20%28USA%29.zip",
+      "status": "success"
+    },
+    {
+      "name": "Dark Cloud 2 (USA) (v2.00).zip",
+      "size": null,
+      "downloadUrl": "https://myrient.erista.me/files/Redump/Sony%20-%20PlayStation%202/Dark%20Cloud%202%20%28USA%29%20%28v2.00%29.zip",
+      "status": "failed"
+    }
+  ],
+  "currentRom": null,
+  "downloadHistory": [
+    {
+      "name": "Dark Cloud 2 (USA) (v2.00).zip",
+      "status": "failed",
+      "completedAt": "2025-08-17T00:08:44.735Z",
+      "error": "filename is not defined"
+    },
+    {
+      "name": "Dark Cloud (USA).zip",
+      "status": "failed",
+      "completedAt": "2025-08-17T00:08:46.942Z",
+      "error": "filename is not defined"
+    },
+    {
+      "name": "Dark Cloud 2 (USA) (v2.00).zip",
+      "status": "success",
+      "completedAt": "2025-08-17T00:45:36.456Z",
+      "originalPath": "downloads/Dark Cloud 2 (USA) (v2.00).zip",
+      "organizationResult": null
+    },
+    {
+      "name": "Metal Gear Solid 2 - Substance (USA).zip",
+      "status": "needs-rescrape",
+      "completedAt": "2025-08-17T00:49:38.880Z",
+      "error": "Cannot download ROM without downloadUrl: Metal Gear Solid 2 - Substance (USA).zip. Please re-scrape the ROM list to get updated download URLs."
+    },
+    {
+      "name": "Metal Gear Solid 2 - Sons of Liberty (USA).zip",
+      "status": "needs-rescrape",
+      "completedAt": "2025-08-17T00:49:38.880Z",
+      "error": "Cannot download ROM without downloadUrl: Metal Gear Solid 2 - Sons of Liberty (USA).zip. Please re-scrape the ROM list to get updated download URLs."
+    },
+    {
+      "name": "Metal Gear Solid 2 - Substance (USA).zip",
+      "status": "needs-rescrape",
+      "completedAt": "2025-08-17T00:50:28.113Z",
+      "error": "Cannot download ROM without downloadUrl: Metal Gear Solid 2 - Substance (USA).zip. Please re-scrape the ROM list to get updated download URLs."
+    },
+    {
+      "name": "Dark Cloud (USA).zip",
+      "status": "needs-rescrape",
+      "completedAt": "2025-08-17T00:51:13.507Z",
+      "error": "Cannot download ROM without downloadUrl: Dark Cloud (USA).zip. Please re-scrape the ROM list to get updated download URLs."
+    },
+    {
+      "name": "Dark Cloud (USA).zip",
+      "status": "success",
+      "completedAt": "2025-08-17T00:57:25.325Z",
+      "originalPath": "downloads/Dark Cloud (USA).zip",
+      "organizationResult": {
+        "ruleset": "gba",
+        "originalFile": "downloads/Dark Cloud (USA).zip",
+        "extractedFiles": [
+          "downloads/extracted/Dark Cloud (USA)/Dark Cloud (USA).iso"
+        ],
+        "movedFiles": [
+          "/Users/chrismacrae/Developer/Code/chrisdmacrae/rom-downloader/organized/gba/Dark Cloud (USA).gba"
+        ],
+        "errors": []
+      }
+    },
+    {
+      "name": "Dark Cloud (USA).zip",
+      "status": "success",
+      "completedAt": "2025-08-17T01:00:18.581Z",
+      "originalPath": "downloads/Dark Cloud (USA).zip",
+      "organizationResult": {
+        "ruleset": "gba",
+        "originalFile": "downloads/Dark Cloud (USA).zip",
+        "extractedFiles": [
+          "downloads/extracted/Dark Cloud (USA)/Dark Cloud (USA).iso"
+        ],
+        "movedFiles": [
+          "/Users/chrismacrae/Developer/Code/chrisdmacrae/rom-downloader/organized/gba/Dark Cloud (USA).gba"
+        ],
+        "errors": []
+      }
+    },
+    {
+      "name": "Dark Cloud 2 (USA) (v2.00).zip",
+      "status": "failed",
+      "completedAt": "2025-08-17T01:00:31.033Z",
+      "error": "Download cancelled: Dark Cloud 2 (USA) (v2.00).zip"
+    }
+  ],
+  "ruleset": "gba",
+  "lastActivity": "2025-08-17T01:00:31.033Z",
+  "createdAt": "2025-08-16T23:58:34.244Z",
+  "sessionStats": {
+    "totalBytesDownloaded": 0,
+    "sessionStartTime": "2025-08-16T23:59:36.179Z",
+    "currentDownloadSpeed": 28254208,
+    "averageSessionSpeed": 50644347.42468567,
+    "peakSpeed": 1444841516.9660678,
+    "activeDownloads": 1,
+    "speedHistory": [
+      {
+        "speed": 27772678.64271457,
+        "timestamp": "2025-08-17T00:54:01.155Z",
+        "bytes": 66612350
+      },
+      {
+        "speed": 41352178.731902145,
+        "timestamp": "2025-08-17T00:54:25.997Z",
+        "bytes": 82828414
+      },
+      {
+        "speed": 29185791.10444778,
+        "timestamp": "2025-08-17T00:54:27.997Z",
+        "bytes": 141229182
+      },
+      {
+        "speed": 28805053.47326337,
+        "timestamp": "2025-08-17T00:54:29.999Z",
+        "bytes": 198868094
+      },
+      {
+        "speed": 278002976.5586035,
+        "timestamp": "2025-08-17T00:57:06.265Z",
+        "bytes": 557395968
+      },
+      {
+        "speed": 30443520,
+        "timestamp": "2025-08-17T00:57:08.264Z",
+        "bytes": 618283008
+      },
+      {
+        "speed": 28665859.070464768,
+        "timestamp": "2025-08-17T00:57:10.265Z",
+        "bytes": 675643392
+      },
+      {
+        "speed": 29007872,
+        "timestamp": "2025-08-17T00:57:12.265Z",
+        "bytes": 733659136
+      },
+      {
+        "speed": 28059954.022988506,
+        "timestamp": "2025-08-17T00:57:14.266Z",
+        "bytes": 789807104
+      },
+      {
+        "speed": 28362906.546726637,
+        "timestamp": "2025-08-17T00:57:16.267Z",
+        "bytes": 846561280
+      },
+      {
+        "speed": 25431792,
+        "timestamp": "2025-08-17T00:57:17.812Z",
+        "bytes": 342322104
+      },
+      {
+        "speed": 5804535.589845695,
+        "timestamp": "2025-08-17T00:57:28.540Z",
+        "bytes": 11661312
+      },
+      {
+        "speed": 28625896.948474236,
+        "timestamp": "2025-08-17T00:57:32.537Z",
+        "bytes": 126107648
+      },
+      {
+        "speed": 28190960.51974013,
+        "timestamp": "2025-08-17T00:57:34.537Z",
+        "bytes": 182517760
+      },
+      {
+        "speed": 29109834.16583417,
+        "timestamp": "2025-08-17T00:57:36.539Z",
+        "bytes": 240795648
+      },
+      {
+        "speed": 25067520,
+        "timestamp": "2025-08-17T00:57:38.539Z",
+        "bytes": 290930688
+      },
+      {
+        "speed": 30632023.97602398,
+        "timestamp": "2025-08-17T00:57:40.542Z",
+        "bytes": 352256000
+      },
+      {
+        "speed": 28217798.201798204,
+        "timestamp": "2025-08-17T00:57:42.543Z",
+        "bytes": 408748032
+      },
+      {
+        "speed": 27061029.485257372,
+        "timestamp": "2025-08-17T00:57:44.544Z",
+        "bytes": 462897152
+      },
+      {
+        "speed": 30449664,
+        "timestamp": "2025-08-17T00:57:46.545Z",
+        "bytes": 523796480
+      },
+      {
+        "speed": 23491102.44877561,
+        "timestamp": "2025-08-17T00:57:48.545Z",
+        "bytes": 570802176
+      },
+      {
+        "speed": 27503176.411794104,
+        "timestamp": "2025-08-17T00:57:50.547Z",
+        "bytes": 625836032
+      },
+      {
+        "speed": 29766038.941587616,
+        "timestamp": "2025-08-17T00:57:52.549Z",
+        "bytes": 685457408
+      },
+      {
+        "speed": 29009751.124437783,
+        "timestamp": "2025-08-17T00:57:54.550Z",
+        "bytes": 743505920
+      },
+      {
+        "speed": 621886498.252621,
+        "timestamp": "2025-08-17T00:58:18.813Z",
+        "bytes": 1245638656
+      },
+      {
+        "speed": 30582784,
+        "timestamp": "2025-08-17T00:58:20.813Z",
+        "bytes": 1306804224
+      },
+      {
+        "speed": 29376512,
+        "timestamp": "2025-08-17T00:58:22.813Z",
+        "bytes": 1365557248
+      },
+      {
+        "speed": 28985187.406296853,
+        "timestamp": "2025-08-17T00:58:24.815Z",
+        "bytes": 1423556608
+      },
+      {
+        "speed": 1036263.4730538923,
+        "timestamp": "2025-08-17T00:59:29.250Z",
+        "bytes": 2076672
+      },
+      {
+        "speed": 23256949.152542375,
+        "timestamp": "2025-08-17T00:59:36.909Z",
+        "bytes": 46653440
+      },
+      {
+        "speed": 28807168,
+        "timestamp": "2025-08-17T00:59:38.909Z",
+        "bytes": 104267776
+      },
+      {
+        "speed": 29085282.71728272,
+        "timestamp": "2025-08-17T00:59:40.910Z",
+        "bytes": 162496512
+      },
+      {
+        "speed": 29672971.51424288,
+        "timestamp": "2025-08-17T00:59:42.911Z",
+        "bytes": 221872128
+      },
+      {
+        "speed": 29564928,
+        "timestamp": "2025-08-17T00:59:44.911Z",
+        "bytes": 281001984
+      },
+      {
+        "speed": 26184923.538230885,
+        "timestamp": "2025-08-17T00:59:46.913Z",
+        "bytes": 333398016
+      },
+      {
+        "speed": 28068141.929035485,
+        "timestamp": "2025-08-17T00:59:48.914Z",
+        "bytes": 389562368
+      },
+      {
+        "speed": 30705678.321678326,
+        "timestamp": "2025-08-17T00:59:50.915Z",
+        "bytes": 451035136
+      },
+      {
+        "speed": 29075254.372813594,
+        "timestamp": "2025-08-17T00:59:52.916Z",
+        "bytes": 509214720
+      },
+      {
+        "speed": 28068141.929035485,
+        "timestamp": "2025-08-17T00:59:54.917Z",
+        "bytes": 565379072
+      },
+      {
+        "speed": 28240087.95602199,
+        "timestamp": "2025-08-17T00:59:56.918Z",
+        "bytes": 621887488
+      },
+      {
+        "speed": 24985600,
+        "timestamp": "2025-08-17T00:59:58.919Z",
+        "bytes": 671858688
+      },
+      {
+        "speed": 26618882.55872064,
+        "timestamp": "2025-08-17T01:00:00.919Z",
+        "bytes": 725123072
+      },
+      {
+        "speed": 370801493.7593609,
+        "timestamp": "2025-08-17T01:00:05.211Z",
+        "bytes": 742715392
+      },
+      {
+        "speed": 28307638.180909548,
+        "timestamp": "2025-08-17T01:00:07.211Z",
+        "bytes": 799358976
+      },
+      {
+        "speed": 28993375.31234383,
+        "timestamp": "2025-08-17T01:00:09.213Z",
+        "bytes": 857374720
+      },
+      {
+        "speed": 21833753,
+        "timestamp": "2025-08-17T01:00:10.402Z",
+        "bytes": 155069368
+      },
+      {
+        "speed": 4327077.383924114,
+        "timestamp": "2025-08-17T01:00:22.204Z",
+        "bytes": 8667136
+      },
+      {
+        "speed": 29183488.511488516,
+        "timestamp": "2025-08-17T01:00:24.205Z",
+        "bytes": 67092480
+      },
+      {
+        "speed": 28295168,
+        "timestamp": "2025-08-17T01:00:28.205Z",
+        "bytes": 180273152
+      },
+      {
+        "speed": 28254208,
+        "timestamp": "2025-08-17T01:00:30.205Z",
+        "bytes": 236781568
+      }
+    ]
+  },
+  "startTime": "2025-08-16T23:59:36.032Z",
+  "totalRoms": 2,
+  "completedRoms": 1,
+  "failedRoms": 1
+}

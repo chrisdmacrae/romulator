@@ -436,6 +436,89 @@
   font-style: italic;
 }
 
+.progress-size {
+  margin-bottom: 0.25rem;
+}
+
+.progress-speed {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #495057;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
+.speed-current {
+  font-weight: 600;
+  color: #28a745;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.parallel-indicator {
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+  color: white;
+  padding: 0.1rem 0.4rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  animation: pulse-parallel 2s infinite;
+}
+
+@keyframes pulse-parallel {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.speed-eta {
+  color: #6c757d;
+}
+
+/* Session Statistics */
+.session-stats {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(33, 150, 243, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(33, 150, 243, 0.1);
+}
+
+.session-stats h4 {
+  margin: 0 0 1rem 0;
+  color: #1976d2;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.session-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.session-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.session-stat-label {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 0.25rem;
+}
+
+.session-stat-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1976d2;
+}
+
 .queue-list {
   padding: 2rem;
   border-bottom: 1px solid #e1e5e9;
