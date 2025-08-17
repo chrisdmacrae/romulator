@@ -40,10 +40,22 @@
   border: 1px solid #c3e6cb;
 }
 
+.connection-badge.connecting {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+  animation: pulse 1.5s infinite;
+}
+
 .connection-badge.disconnected {
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 .refresh-indicator {
@@ -481,7 +493,6 @@
 /* Session Statistics */
 .session-stats {
   margin-top: 1.5rem;
-  padding: 1rem;
   background: rgba(33, 150, 243, 0.05);
   border-radius: 8px;
   border: 1px solid rgba(33, 150, 243, 0.1);
@@ -494,17 +505,36 @@
   font-weight: 600;
 }
 
+.session-stats-left {
+  padding: 1rem;
+  flex-basis: 50%;
+}
+
+.session-stats-container {
+  display: flex;
+  gap: 0;
+  min-height: 200px; /* Allow container to expand for the chart */
+  flex-basis: 100%;
+  align-items: flex-start; /* Align items to top instead of stretching */
+}
+
 .session-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
+  padding-right: 1rem;
+}
+
+.session-stats-chart {
+  width: 50%;
+  min-height: 200px; /* Allow chart to expand to its natural height */
+  display: flex;
+  flex-direction: column;
 }
 
 .session-stat {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
 }
 
 .session-stat-label {
@@ -519,16 +549,168 @@
   color: #1976d2;
 }
 
+/* Speed Chart Styles */
+.chart-header {
+  display: none; /* Hide the external header */
+}
+
+.speed-chart {
+  position: relative;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid rgba(33, 150, 243, 0.2);
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+.speed-chart-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e1e5e9;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.chart-no-data {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Chart labels inside the graph */
+.chart-internal-header {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  text-align: center;
+  z-index: 10;
+}
+
+.chart-internal-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1976d2;
+  display: block;
+}
+
+.chart-internal-subtitle {
+  font-size: 0.6rem;
+  color: #6c757d;
+  display: block;
+}
+
+.speed-chart-svg {
+  display: block;
+}
+
+.speed-chart-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2px 4px;
+}
+
+.speed-label-max,
+.speed-label-min {
+  font-size: 0.6rem;
+  color: #6c757d;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 1px 3px;
+  border-radius: 2px;
+  align-self: flex-start;
+}
+
+.speed-label-min {
+  align-self: flex-end;
+}
+
 .queue-list {
   padding: 2rem;
   border-bottom: 1px solid #e1e5e9;
 }
 
+.queue-header-with-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
 .queue-list h3 {
-  margin: 0 0 1rem 0;
+  margin: 0;
   color: #333;
   font-size: 1.2rem;
   font-weight: 600;
+}
+
+.queue-stats-badges {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  color: #495057;
+  cursor: help;
+  transition: all 0.2s ease;
+}
+
+.stat-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stat-badge.total {
+  background: #e3f2fd;
+  border-color: #bbdefb;
+  color: #1976d2;
+}
+
+.stat-badge.total:hover {
+  background: #bbdefb;
+  border-color: #90caf9;
+}
+
+.stat-badge.completed {
+  background: #e8f5e8;
+  border-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.stat-badge.completed:hover {
+  background: #c8e6c9;
+  border-color: #a5d6a7;
+}
+
+.stat-badge.failed {
+  background: #ffebee;
+  border-color: #ffcdd2;
+  color: #d32f2f;
+}
+
+.stat-badge.failed:hover {
+  background: #ffcdd2;
+  border-color: #ef9a9a;
 }
 
 .rom-list {
@@ -983,6 +1165,21 @@
   .queue-list {
     padding: 1rem;
   }
+
+  .queue-header-with-stats {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .queue-stats-badges {
+    gap: 0.375rem;
+  }
+
+  .stat-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
   
   .rom-item {
     flex-direction: column;
@@ -1015,5 +1212,22 @@
   .download-info {
     flex-direction: column;
     gap: 0.25rem;
+  }
+
+  /* Responsive design for session stats */
+  .session-stats-container {
+    flex-direction: column;
+    gap: 1rem;
+    height: auto;
+  }
+
+  .session-stats-grid {
+    width: 100%;
+    padding-right: 0;
+  }
+
+  .session-stats-chart {
+    width: 100%;
+    min-height: 200px; /* Allow chart to expand on mobile too */
   }
 }

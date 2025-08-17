@@ -148,7 +148,18 @@ class RoomDownloadProcessor {
               sessionStats: roomData.sessionStats
             };
 
-            console.log(`📊 Downloader emitting progress to shared room:`, enhancedProgressData);
+            console.log(`📊 Downloader emitting progress to shared room (${SHARED_ROOM_ID}):`, {
+              romName: enhancedProgressData.romName,
+              progress: enhancedProgressData.progress,
+              downloadedBytes: enhancedProgressData.downloadedBytes,
+              totalBytes: enhancedProgressData.totalBytes,
+              currentSpeed: enhancedProgressData.currentSpeed
+            });
+
+            // Get connected clients count for debugging
+            const connectedClients = io.sockets.adapter.rooms.get(SHARED_ROOM_ID)?.size || 0;
+            console.log(`📊 Emitting to ${connectedClients} clients in room ${SHARED_ROOM_ID}`);
+
             io.to(SHARED_ROOM_ID).emit('fileProgress', enhancedProgressData);
           }
         });
@@ -609,19 +620,10 @@ app.post('/api/scrape', async (req, res) => {
     const userRoomId = SHARED_ROOM_ID;
     const roomData = sharedRoomData;
 
-    // Create a new downloader instance with progress callback
+    // Create a new downloader instance for scraping (no progress callback needed for scraping)
     const downloader = new RomDownloader({
       headless: true,
-      timeout: 30000,
-      progressCallback: (progressData) => {
-        // Emit file download progress to the user's room
-        console.log(`📊 Server emitting file progress to room ${userRoomId}:`, progressData);
-        io.to(userRoomId).emit('fileProgress', progressData);
-
-        // Also emit to download room for backwards compatibility
-        const downloadRoom = `download-${userRoomId}`;
-        io.to(downloadRoom).emit('fileProgress', progressData);
-      }
+      timeout: 30000
     });
 
     await downloader.init();
@@ -1392,6 +1394,11 @@ io.on('connection', (socket) => {
     const downloadRoom = `download-${userRoomId}`;
     socket.join(downloadRoom);
     console.log(`📥 Client ${socket.id} joined download room: ${downloadRoom}`);
+
+    // Log current room memberships for debugging
+    const mainRoomClients = io.sockets.adapter.rooms.get(SHARED_ROOM_ID)?.size || 0;
+    const downloadRoomClients = io.sockets.adapter.rooms.get(downloadRoom)?.size || 0;
+    console.log(`📊 Room memberships - Main room (${SHARED_ROOM_ID}): ${mainRoomClients} clients, Download room (${downloadRoom}): ${downloadRoomClients} clients`);
   });
 
   // Handle leaving rooms

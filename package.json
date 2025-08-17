@@ -9,7 +9,7 @@
     "dev": "node --inspect src/index.js",
     "web": "PORT=3001 node src/server.js",
     "web:dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
-    "server:dev": "PORT=3001 nodemon src/server.js",
+    "server:dev": "PORT=3001 nodemon --config nodemon.json src/server.js",
     "client:dev": "vite",
     "client:build": "vite build",
     "install-browsers": "npx playwright install"

@@ -478,15 +478,15 @@ export class RomDownloader {
                     return reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
                 }
 
-                // Use pre-fetched size or fall back to Content-Length header
+                // Use HEAD request size, or fall back to Content-Length from GET request
                 const responseContentLength = parseInt(response.headers['content-length']) || 0;
-                if (totalBytes === 0 && responseContentLength > 0) {
+                if (totalBytes > 0) {
+                    console.log(chalk.blue(`📊 Using file size from HEAD request: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`));
+                } else if (responseContentLength > 0) {
                     totalBytes = responseContentLength;
-                    console.log(chalk.blue(`📊 Content-Length from GET response: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`));
-                } else if (totalBytes > 0) {
-                    console.log(chalk.blue(`📊 Using pre-fetched file size: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`));
+                    console.log(chalk.blue(`📊 HEAD request failed, using Content-Length from GET request: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`));
                 } else {
-                    console.log(chalk.yellow(`📊 Starting download - Total size: Unknown`));
+                    console.log(chalk.yellow(`⚠️ No file size available from either HEAD or GET request - progress will be indeterminate`));
                 }
 
                 let downloadedBytes = 0;

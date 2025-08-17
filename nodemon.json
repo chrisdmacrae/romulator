@@ -1,0 +1,28 @@
+{
+  "watch": [
+    "src/server.js",
+    "src/curlDownloader.js",
+    "src/romDownloader.js",
+    "src/downloadProcessor.js"
+  ],
+  "ignore": [
+    "src/components/**/*",
+    "src/App.jsx",
+    "*.css",
+    "*.md",
+    "*.json",
+    "node_modules/**/*",
+    "dist/**/*",
+    "downloads/**/*",
+    "sessions/**/*",
+    ".git/**/*",
+    "*.log",
+    "*.tmp"
+  ],
+  "ext": "js,mjs",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "delay": 2000,
+  "verbose": true
+}

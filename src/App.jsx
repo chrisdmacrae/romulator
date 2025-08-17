@@ -140,11 +140,12 @@ function App() {
         console.log('🏠 Using shared room:', SHARED_ROOM_ID);
 
         // Initialize socket connection
-        // In production/Docker, connect to the same origin
-        // In development, connect to the backend server port
-        const socketUrl = window.location.hostname === 'localhost' && window.location.port === '3000'
-          ? 'http://localhost:3001'  // Development: Vite dev server connecting to backend
-          : window.location.origin;  // Production/Docker: same origin
+        // Always connect to port 3001 where the server is running
+        const socketUrl = window.location.hostname === 'localhost'
+          ? 'http://localhost:3001'  // Local development: always connect to backend on 3001
+          : `${window.location.protocol}//${window.location.hostname}:3001`;  // Production: connect to port 3001
+
+console.log({ socketUrl })
 
         console.log('🔌 Connecting to socket at:', socketUrl);
         const newSocket = io(socketUrl, {
@@ -208,6 +209,18 @@ function App() {
           console.log('📥 Download progress received:', progress);
         });
 
+        // Listen for file progress updates (the actual progress events from downloads)
+        newSocket.on('fileProgress', (progress) => {
+          console.log('📁 File progress received in App.jsx:', {
+            romName: progress.romName,
+            progress: progress.progress,
+            downloadedBytes: progress.downloadedBytes,
+            totalBytes: progress.totalBytes,
+            currentSpeed: progress.currentSpeed,
+            timestamp: new Date().toISOString()
+          });
+        });
+
         // Listen for download completion
         newSocket.on('downloadComplete', (result) => {
           console.log('✅ Download complete received:', result);
@@ -243,6 +256,7 @@ function App() {
         if (socket) {
           socket.off('roomUpdate');
           socket.off('downloadProgress');
+          socket.off('fileProgress');
           socket.off('downloadComplete');
           socket.off('downloadStateRestored');
           socket.off('connect');
@@ -317,8 +331,9 @@ function App() {
     setLoading(true);
     setError(null);
 
-    // Join the download room for real-time updates
+    // Join the download room for real-time updates BEFORE starting download
     if (socket) {
+      console.log('🏠 Joining download room before starting download:', SHARED_ROOM_ID);
       socket.emit('joinDownloadRoom', SHARED_ROOM_ID);
     }
 

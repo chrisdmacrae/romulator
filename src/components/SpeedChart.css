@@ -1,0 +1,313 @@
+/* Enhanced Speed Chart Styles */
+.enhanced-speed-chart {
+  position: relative;
+  background: white;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.enhanced-speed-chart-svg {
+  display: block;
+}
+
+/* Chart container */
+.chart-scroll-container {
+  border-radius: 4px;
+  background: white;
+  position: relative;
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Chart header inside the graph */
+.chart-internal-header {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  right: 8px;
+  text-align: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.chart-internal-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1976d2;
+  display: block;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.spike-indicator-text {
+  font-size: 0.6rem;
+  color: #FF5722;
+  margin-left: 8px;
+  background: rgba(255, 87, 34, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 87, 34, 0.3);
+}
+
+.chart-internal-subtitle {
+  font-size: 0.6rem;
+  color: #6c757d;
+  display: block;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Speed labels on the left side */
+.speed-labels {
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.speed-label-max,
+.speed-label-mid,
+.speed-label-min {
+  font-size: 0.55rem;
+  color: #6c757d;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1px 3px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Current speed overlay */
+.current-speed-overlay {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.current-speed-value {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #1B5E20;
+  background: rgba(76, 175, 80, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Tooltip styles */
+.speed-tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  min-width: 140px;
+  /* No animation */
+}
+
+.tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.tooltip-time {
+  font-weight: 600;
+  color: #64B5F6;
+}
+
+.tooltip-spike-badge {
+  background: #FF5722;
+  color: white;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+
+.tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tooltip-speed,
+.tooltip-capped,
+.tooltip-index {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tooltip-label {
+  color: #B0BEC5;
+  font-size: 0.7rem;
+}
+
+.tooltip-value {
+  font-weight: 600;
+  color: white;
+}
+
+.tooltip-capped .tooltip-value {
+  color: #FF9800;
+}
+
+.tooltip-arrow {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(0, 0, 0, 0.9);
+}
+
+/* Tooltip trigger area */
+.tooltip-trigger:hover {
+  fill: rgba(33, 150, 243, 0.1);
+}
+
+/* Static styles - no animations */
+.speed-bar {
+  opacity: 1;
+}
+
+.speed-line {
+  shape-rendering: geometricPrecision;
+}
+
+.speed-area {
+  opacity: 1;
+}
+
+.speed-point {
+  opacity: 1;
+}
+
+/* .current-speed-indicator - no additional styles needed */
+
+.spike-indicator {
+  opacity: 0.8;
+}
+
+/* Hover effects - static, no transitions */
+.speed-point:hover {
+  filter: drop-shadow(0 0 4px rgba(76, 175, 80, 0.6));
+}
+
+.current-speed-indicator:hover {
+  filter: drop-shadow(0 0 6px rgba(27, 94, 32, 0.8));
+}
+
+.tooltip-trigger:hover + .speed-bar {
+  opacity: 0.8;
+}
+
+/* Placeholder styles */
+.speed-chart-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e1e5e9;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.chart-no-data {
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chart-internal-title {
+    font-size: 0.7rem;
+  }
+  
+  .chart-internal-subtitle {
+    font-size: 0.55rem;
+  }
+  
+  .speed-label-max,
+  .speed-label-mid,
+  .speed-label-min {
+    font-size: 0.5rem;
+    padding: 1px 2px;
+  }
+  
+  .current-speed-value {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .enhanced-speed-chart {
+    background: #1e1e1e;
+    border-color: rgba(76, 175, 80, 0.3);
+  }
+  
+  .chart-internal-title {
+    color: #64B5F6;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  
+  .chart-internal-subtitle {
+    color: #9E9E9E;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  
+  .speed-label-max,
+  .speed-label-mid,
+  .speed-label-min {
+    background: rgba(30, 30, 30, 0.9);
+    color: #9E9E9E;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .current-speed-value {
+    background: rgba(76, 175, 80, 0.2);
+    color: #81C784;
+    border-color: rgba(76, 175, 80, 0.4);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  
+  .speed-chart-placeholder {
+    background: #2e2e2e;
+    border-color: #404040;
+  }
+  
+  .chart-no-data {
+    color: #9E9E9E;
+  }
+}

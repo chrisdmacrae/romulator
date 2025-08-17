@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Organizer from './Organizer';
+import SpeedChart from './SpeedChart';
 import './DownloadQueue.css';
 
 const DownloadQueue = ({ socket, userRoomId }) => {
@@ -12,8 +13,10 @@ const DownloadQueue = ({ socket, userRoomId }) => {
   const [downloadProgress, setDownloadProgress] = useState(null);
   const [isActiveDownload, setIsActiveDownload] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
+  const [socketConnecting, setSocketConnecting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [fileProgress, setFileProgress] = useState(null);
+  const [speedHistory, setSpeedHistory] = useState([]);
 
   useEffect(() => {
     // Fetch initial queue data and completed downloads (show loading for initial load)
@@ -34,6 +37,16 @@ const DownloadQueue = ({ socket, userRoomId }) => {
         // Check if there's an active download
         const hasActiveDownload = roomData.status === 'downloading' && roomData.currentRom;
         setIsActiveDownload(hasActiveDownload);
+
+        // Update speed history from room update if available (but don't replace existing data)
+        if (roomData?.sessionStats?.speedHistory) {
+          console.log('📊 Updating speed history from socket room update:', roomData.sessionStats.speedHistory.length, 'data points');
+          const formattedHistory = roomData.sessionStats.speedHistory.map(point => ({
+            timestamp: point.timestamp,
+            speed: point.speed / (1024 * 1024) // Convert bytes/s to MB/s
+          }));
+          setSpeedHistory(formattedHistory);
+        }
 
         // Refresh completed downloads when room updates
         fetchCompletedDownloads();
@@ -57,34 +70,85 @@ const DownloadQueue = ({ socket, userRoomId }) => {
       socket.on('fileProgress', (progress) => {
         console.log('📁 DownloadQueue received file progress:', progress);
         setFileProgress(progress);
+
+        // Add speed data point to history if we have speed data
+        if (progress.currentSpeed && progress.currentSpeed > 0) {
+          const timestamp = Date.now();
+          const speedMBps = progress.currentSpeed / (1024 * 1024);
+
+          setSpeedHistory(prev => {
+            const newHistory = [...prev, { timestamp, speed: speedMBps }];
+            // Keep only last 60 data points (about 1 minute of data if updated every second)
+            return newHistory.slice(-60);
+          });
+        }
       });
 
       // Handle connection status
       socket.on('connect', () => {
         console.log('🔌 DownloadQueue socket connected:', socket.id);
         setSocketConnected(true);
+        setSocketConnecting(false);
       });
 
       socket.on('disconnect', () => {
         console.log('🔌 DownloadQueue socket disconnected');
         setSocketConnected(false);
+        setSocketConnecting(false);
       });
 
-      // Set initial connection status
-      setSocketConnected(socket.connected);
+      socket.on('connect_error', (error) => {
+        console.log('🔌 DownloadQueue socket connection error:', error);
+        setSocketConnected(false);
+        setSocketConnecting(false);
+      });
+
+      // Handle connecting state
+      if (!socket.connected && socket.connecting) {
+        setSocketConnecting(true);
+      }
+
+      // Set initial connection status and log it
+      const initialConnectionState = socket.connected;
+      console.log('🔌 DownloadQueue initial socket state:', {
+        connected: initialConnectionState,
+        id: socket.id,
+        readyState: socket.readyState
+      });
+      setSocketConnected(initialConnectionState);
+
+      // Periodic connection check (in case we miss events)
+      const connectionCheckInterval = setInterval(() => {
+        const currentState = socket.connected;
+        if (currentState !== socketConnected) {
+          console.log('🔌 DownloadQueue connection state changed via polling:', currentState);
+          setSocketConnected(currentState);
+          setSocketConnecting(false);
+        }
+      }, 1000);
 
       return () => {
+        clearInterval(connectionCheckInterval);
         socket.off('roomUpdate');
         socket.off('downloadComplete');
         socket.off('downloadProgress');
         socket.off('fileProgress');
         socket.off('connect');
         socket.off('disconnect');
+        socket.off('connect_error');
       };
     }
-  }, [socket]);
+  }, [socket, socketConnected]);
 
-
+  // Debug effect to log socket state changes
+  useEffect(() => {
+    console.log('🔌 DownloadQueue socket state changed:', {
+      connected: socketConnected,
+      connecting: socketConnecting,
+      socketId: socket?.id,
+      socketConnected: socket?.connected
+    });
+  }, [socketConnected, socketConnecting, socket]);
 
   const fetchQueueData = async (showLoading = false) => {
     try {
@@ -104,6 +168,21 @@ const DownloadQueue = ({ socket, userRoomId }) => {
       const data = await response.json();
       console.log('📊 DownloadQueue fetchQueueData received:', data);
       setQueueData(data.room);
+
+      // Check if there's an active download from initial API data
+      const hasActiveDownload = data.room?.status === 'downloading' && data.room?.currentRom;
+      setIsActiveDownload(hasActiveDownload);
+      console.log('📊 Initial active download state:', hasActiveDownload, 'Current ROM:', data.room?.currentRom);
+
+      // Initialize speed history from session stats if available
+      if (data.room?.sessionStats?.speedHistory) {
+        console.log('📊 Initializing speed history from API:', data.room.sessionStats.speedHistory.length, 'data points');
+        const formattedHistory = data.room.sessionStats.speedHistory.map(point => ({
+          timestamp: point.timestamp,
+          speed: point.speed / (1024 * 1024) // Convert bytes/s to MB/s
+        }));
+        setSpeedHistory(formattedHistory);
+      }
 
     } catch (err) {
       setError(err.message);
@@ -199,6 +278,8 @@ const DownloadQueue = ({ socket, userRoomId }) => {
       return `${hours}h ${minutes}m`;
     }
   };
+
+
 
   const getCompletedDownloads = () => {
     return completedDownloads;
@@ -369,17 +450,17 @@ const DownloadQueue = ({ socket, userRoomId }) => {
                     return bDate - aDate;
                   })
                   .map((download, index) => (
-                  <div key={index} className="completed-download-item">
-                    <div className="download-icon">📄</div>
-                    <div className="download-details">
-                      <div className="download-name">{download.name}</div>
-                      <div className="download-info">
-                        <span className="download-size">{download.size}</span>
-                        <span className="download-date">{formatTime(download.completedAt)}</span>
+                    <div key={index} className="completed-download-item">
+                      <div className="download-icon">📄</div>
+                      <div className="download-details">
+                        <div className="download-name">{download.name}</div>
+                        <div className="download-info">
+                          <span className="download-size">{download.size}</span>
+                          <span className="download-date">{formatTime(download.completedAt)}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
 
@@ -416,63 +497,46 @@ const DownloadQueue = ({ socket, userRoomId }) => {
             <span className={`status-badge ${queueData.status || 'idle'}`}>
               {(queueData.status || 'idle').toUpperCase()}
             </span>
-            <span className={`connection-badge ${socketConnected ? 'connected' : 'disconnected'}`}>
-              {socketConnected ? '🟢 Live' : '🔴 Offline'}
+            <span className={`connection-badge ${socketConnected ? 'connected' : socketConnecting ? 'connecting' : 'disconnected'}`}>
+              {socketConnected ? '🟢 Live' : socketConnecting ? '🟡 Connecting...' : '🔴 Offline'}
             </span>
+            {/* Debug info - can be removed later */}
+            {process.env.NODE_ENV === 'development' && (
+              <span style={{ fontSize: '0.6rem', color: '#666', marginLeft: '0.5rem' }}>
+                (ID: {socket?.id || 'none'})
+              </span>
+            )}
           </div>
         </div>
-        <div className="queue-stats">
-          <div className="stat-card total">
-            <div className="stat-icon">📊</div>
-            <div className="stat-content">
-              <span className="stat-value">{queueData.totalRoms || 0}</span>
-              <span className="stat-label">Total ROMs</span>
-            </div>
-          </div>
-          <div className="stat-card success">
-            <div className="stat-icon">✅</div>
-            <div className="stat-content">
-              <span className="stat-value">{queueData.completedRoms || 0}</span>
-              <span className="stat-label">Completed</span>
-            </div>
-          </div>
-          <div className="stat-card error">
-            <div className="stat-icon">❌</div>
-            <div className="stat-content">
-              <span className="stat-value">{queueData.failedRoms || 0}</span>
-              <span className="stat-label">Failed</span>
-            </div>
-          </div>
-        </div>
+
 
         {/* Session Statistics */}
         {queueData.sessionStats && (
           <div className="session-stats">
-            <h4>📊 Session Statistics</h4>
-            <div className="session-stats-grid">
-              <div className="session-stat">
-                <span className="session-stat-label">Current Speed:</span>
-                <span className="session-stat-value">
-                  {formatSpeed(queueData.sessionStats.currentDownloadSpeed)}
-                </span>
+            <div className="session-stats-container">
+              {/* Left half - Statistics */}
+
+              <div className="session-stats-left">
+                <h4>📊 Session Statistics</h4>
+                <div className="session-stats-grid">
+                  <div className="session-stat">
+                    <span className="session-stat-label">Current Speed:</span>
+                    <span className="session-stat-value">
+                      {formatSpeed(queueData.sessionStats.currentDownloadSpeed)}
+                    </span>
+                  </div>
+                  <div className="session-stat">
+                    <span className="session-stat-label">Peak Speed:</span>
+                    <span className="session-stat-value">
+                      {formatSpeed(queueData.sessionStats.peakSpeed)}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="session-stat">
-                <span className="session-stat-label">Average Speed:</span>
-                <span className="session-stat-value">
-                  {formatSpeed(queueData.sessionStats.averageSessionSpeed)}
-                </span>
-              </div>
-              <div className="session-stat">
-                <span className="session-stat-label">Peak Speed:</span>
-                <span className="session-stat-value">
-                  {formatSpeed(queueData.sessionStats.peakSpeed)}
-                </span>
-              </div>
-              <div className="session-stat">
-                <span className="session-stat-label">Active Downloads:</span>
-                <span className="session-stat-value">
-                  {queueData.sessionStats.activeDownloads || 0}
-                </span>
+
+              {/* Right half - Speed Chart */}
+              <div className="session-stats-chart">
+                <SpeedChart data={speedHistory} sessionStats={queueData.sessionStats} />
               </div>
             </div>
           </div>
@@ -540,7 +604,29 @@ const DownloadQueue = ({ socket, userRoomId }) => {
       )}
 
       <div className="queue-list">
-        <h3>Queued Items</h3>
+        <div className="queue-header-with-stats">
+          <h3>Queued Items</h3>
+          <div className="queue-stats-badges">
+            <span
+              className="stat-badge total"
+              title={`Total ROMs in queue: ${queueData.totalRoms || 0}`}
+            >
+              📊 {queueData.totalRoms || 0}
+            </span>
+            <span
+              className="stat-badge completed"
+              title={`Successfully completed downloads: ${queueData.completedRoms || 0}`}
+            >
+              ✅ {queueData.completedRoms || 0}
+            </span>
+            <span
+              className="stat-badge failed"
+              title={`Failed downloads: ${queueData.failedRoms || 0}`}
+            >
+              ❌ {queueData.failedRoms || 0}
+            </span>
+          </div>
+        </div>
 
         <div className="queue-progress">
           <div className="progress-bar">
@@ -597,59 +683,59 @@ const DownloadQueue = ({ socket, userRoomId }) => {
               return bIndex - aIndex;
             })
             .map((rom, index) => (
-            <div key={index} className={`rom-item ${rom.status}`}>
-              <div className="rom-icon">
-                {getStatusIcon(rom.status)}
-              </div>
-              <div className="rom-details">
-                <div className="rom-name">{rom.name}</div>
-                <div className="rom-size">{rom.size}</div>
-              </div>
-              <div className="rom-status">
-                <span
-                  className="status-badge"
-                  style={{
-                    backgroundColor: getStatusColor(rom.status),
-                    color: 'white'
-                  }}
-                >
-                  {rom.status}
-                </span>
-                {/* Show cancel button for downloading ROMs */}
-                {rom.status === 'downloading' && (
-                  <button
-                    onClick={() => handleCancelDownload(rom.name)}
-                    className="cancel-download-button"
-                    title="Cancel download"
+              <div key={index} className={`rom-item ${rom.status}`}>
+                <div className="rom-icon">
+                  {getStatusIcon(rom.status)}
+                </div>
+                <div className="rom-details">
+                  <div className="rom-name">{rom.name}</div>
+                  <div className="rom-size">{rom.size}</div>
+                </div>
+                <div className="rom-status">
+                  <span
+                    className="status-badge"
+                    style={{
+                      backgroundColor: getStatusColor(rom.status),
+                      color: 'white'
+                    }}
                   >
-                    🚫
-                  </button>
-                )}
+                    {rom.status}
+                  </span>
+                  {/* Show cancel button for downloading ROMs */}
+                  {rom.status === 'downloading' && (
+                    <button
+                      onClick={() => handleCancelDownload(rom.name)}
+                      className="cancel-download-button"
+                      title="Cancel download"
+                    >
+                      🚫
+                    </button>
+                  )}
 
-                {/* Show retry button for failed ROMs */}
-                {(rom.status === 'failed' || rom.status === 'error' || rom.status === 'needs-rescrape' || rom.status === 'corrupted') && (
-                  <button
-                    onClick={() => handleRetryRom(rom.name)}
-                    className="retry-rom-button"
-                    title={rom.status === 'corrupted' ? 'Re-download corrupted file' : 'Retry download'}
-                  >
-                    {rom.status === 'corrupted' ? '💥' : '🔄'}
-                  </button>
-                )}
+                  {/* Show retry button for failed ROMs */}
+                  {(rom.status === 'failed' || rom.status === 'error' || rom.status === 'needs-rescrape' || rom.status === 'corrupted') && (
+                    <button
+                      onClick={() => handleRetryRom(rom.name)}
+                      className="retry-rom-button"
+                      title={rom.status === 'corrupted' ? 'Re-download corrupted file' : 'Retry download'}
+                    >
+                      {rom.status === 'corrupted' ? '💥' : '🔄'}
+                    </button>
+                  )}
 
-                {/* Only show remove button for ROMs that aren't currently downloading */}
-                {rom.status !== 'downloading' && (
-                  <button
-                    onClick={() => handleRemoveRom(rom.name)}
-                    className="remove-rom-button"
-                    title="Remove from queue"
-                  >
-                    🗑️
-                  </button>
-                )}
+                  {/* Only show remove button for ROMs that aren't currently downloading */}
+                  {rom.status !== 'downloading' && (
+                    <button
+                      onClick={() => handleRemoveRom(rom.name)}
+                      className="remove-rom-button"
+                      title="Remove from queue"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
 
         {completedDownloads.length > 0 && (

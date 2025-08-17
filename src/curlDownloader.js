@@ -164,13 +164,15 @@ export class CurlDownloader {
                         return reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
                     }
 
-                    // Use pre-fetched size or fall back to Content-Length header
+                    // Use HEAD request size, or fall back to Content-Length from GET request
                     const responseContentLength = parseInt(response.headers['content-length']) || 0;
-                    if (totalBytes === 0 && responseContentLength > 0) {
+                    if (totalBytes > 0) {
+                        console.log(`📊 Using file size from HEAD request: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
+                    } else if (responseContentLength > 0) {
                         totalBytes = responseContentLength;
-                        console.log(`📊 Content-Length from GET response: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
-                    } else if (totalBytes > 0) {
-                        console.log(`📊 Using pre-fetched file size: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
+                        console.log(`📊 HEAD request failed, using Content-Length from GET request: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
+                    } else {
+                        console.log(`⚠️ No file size available from either HEAD or GET request - progress will be indeterminate`);
                     }
 
                     // Create file descriptor directly (like curl's file handling)
@@ -187,6 +189,26 @@ export class CurlDownloader {
                         filepath: filepath
                     });
 
+                    // Initial progress callback to show total bytes immediately
+                    if (this.progressCallback) {
+                        this.progressCallback({
+                            type: 'fileProgress',
+                            romName: romName,
+                            filename: romName,
+                            progress: 0,
+                            downloadedBytes: 0,
+                            totalBytes: totalBytes > 0 ? totalBytes : null,
+                            status: 'downloading',
+                            currentSpeed: 0,
+                            averageSpeed: 0,
+                            overallAverageSpeed: 0
+                        });
+                    }
+
+                    // Progress tracking variables
+                    let lastProgressTime = Date.now();
+                    let lastProgressBytes = 0;
+
                     // Pure data transfer - no processing overhead
                     response.on('data', (chunk) => {
                         // Check cancellation with minimal overhead
@@ -195,9 +217,41 @@ export class CurlDownloader {
                             fileHandle.destroy();
                             return;
                         }
-                        
+
                         downloadedBytes += chunk.length;
                         fileHandle.write(chunk);
+
+                        // Progress callback (throttled to avoid performance impact)
+                        const now = Date.now();
+                        if (this.progressCallback && now - lastProgressTime >= 1000) { // Update every second
+                            const timeDiff = (now - lastProgressTime) / 1000;
+                            const bytesDiff = downloadedBytes - lastProgressBytes;
+                            const currentSpeed = bytesDiff / timeDiff;
+                            const overallElapsed = (Number(process.hrtime.bigint() - startTime) / 1e9);
+                            const overallSpeed = overallElapsed > 0 ? downloadedBytes / overallElapsed : 0;
+
+                            // Calculate progress percentage if we have total bytes
+                            let progressPercentage = 50; // Default indeterminate
+                            if (totalBytes > 0) {
+                                progressPercentage = Math.min(99, Math.round((downloadedBytes / totalBytes) * 100));
+                            }
+
+                            this.progressCallback({
+                                type: 'fileProgress',
+                                romName: romName,
+                                filename: romName,
+                                progress: progressPercentage,
+                                downloadedBytes: downloadedBytes,
+                                totalBytes: totalBytes > 0 ? totalBytes : null,
+                                status: 'downloading',
+                                currentSpeed: currentSpeed,
+                                averageSpeed: overallSpeed,
+                                overallAverageSpeed: overallSpeed
+                            });
+
+                            lastProgressTime = now;
+                            lastProgressBytes = downloadedBytes;
+                        }
                     });
 
                     response.on('end', () => {
@@ -224,7 +278,7 @@ export class CurlDownloader {
                                 filename: romName,
                                 progress: 100,
                                 downloadedBytes: downloadedBytes,
-                                totalBytes: downloadedBytes,
+                                totalBytes: totalBytes > 0 ? totalBytes : downloadedBytes,
                                 status: 'complete',
                                 currentSpeed: speedBps,
                                 averageSpeed: speedBps,

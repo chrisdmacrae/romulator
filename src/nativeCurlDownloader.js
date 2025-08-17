@@ -166,7 +166,7 @@ export class NativeCurlDownloader {
                 '--fail',                      // Fail on HTTP errors
                 '--show-error',                // Show errors
                 '--silent',                    // Silent mode (no progress bar)
-                '--write-out', '%{size_download}\\n%{speed_download}\\n%{time_total}\\n' // Output stats
+                '--write-out', '%{size_download}\\n%{speed_download}\\n%{time_total}\\n%{size_header}\\n' // Output stats including content-length
             ];
 
             console.log(`🌐 Executing: curl ${curlArgs.join(' ')}`);
@@ -180,6 +180,22 @@ export class NativeCurlDownloader {
                 filepath: filepath,
                 startTime: startTime
             });
+
+            // Initial progress callback to show total bytes immediately
+            if (this.progressCallback) {
+                this.progressCallback({
+                    type: 'fileProgress',
+                    romName: romName,
+                    filename: romName,
+                    progress: 0,
+                    downloadedBytes: 0,
+                    totalBytes: totalBytes > 0 ? totalBytes : null,
+                    status: 'downloading',
+                    currentSpeed: 0,
+                    averageSpeed: 0,
+                    overallAverageSpeed: 0
+                });
+            }
 
             let outputBuffer = '';
 
@@ -215,6 +231,13 @@ export class NativeCurlDownloader {
                 const sizeDownloaded = parseInt(lines[0]) || 0;
                 const speedDownload = parseFloat(lines[1]) || 0;
                 const timeTotal = parseFloat(lines[2]) || 0;
+                const sizeHeader = parseInt(lines[3]) || 0; // Content-Length from headers
+
+                // Use HEAD request size, or fall back to Content-Length from GET request
+                if (totalBytes <= 0 && sizeHeader > 0) {
+                    totalBytes = sizeHeader;
+                    console.log(`📊 HEAD request failed, using Content-Length from GET request: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
+                }
 
                 const speedMBps = speedDownload / (1024 * 1024);
 
@@ -229,7 +252,7 @@ export class NativeCurlDownloader {
                         filename: romName,
                         progress: 100,
                         downloadedBytes: sizeDownloaded,
-                        totalBytes: sizeDownloaded,
+                        totalBytes: totalBytes > 0 ? totalBytes : sizeDownloaded,
                         status: 'complete',
                         currentSpeed: speedDownload,
                         averageSpeed: speedDownload,
@@ -268,13 +291,19 @@ export class NativeCurlDownloader {
 
                             console.log(`📊 Progress: ${(currentBytes / 1024 / 1024).toFixed(1)} MB | Speed: ${(currentSpeed / 1024 / 1024).toFixed(2)} MB/s`);
 
+                            // Calculate progress percentage if we have total bytes
+                            let progressPercentage = 50; // Default indeterminate
+                            if (totalBytes > 0) {
+                                progressPercentage = Math.min(99, Math.round((currentBytes / totalBytes) * 100));
+                            }
+
                             this.progressCallback({
                                 type: 'fileProgress',
                                 romName: romName,
                                 filename: romName,
-                                progress: 50, // Unknown total, show indeterminate
+                                progress: progressPercentage,
                                 downloadedBytes: currentBytes,
-                                totalBytes: null,
+                                totalBytes: totalBytes > 0 ? totalBytes : null,
                                 status: 'downloading',
                                 currentSpeed: currentSpeed,
                                 averageSpeed: overallSpeed,
