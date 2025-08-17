@@ -37,13 +37,93 @@ export class CurlDownloader {
         return this.curlStyleDownload(rom.downloadUrl, filepath, rom.name);
     }
 
+    // Get file size using HEAD request first
+    async getFileSize(url) {
+        return new Promise((resolve, reject) => {
+            const performHeadRequest = (requestUrl, redirectCount = 0) => {
+                if (redirectCount > 10) {
+                    return reject(new Error('Too many redirects'));
+                }
+
+                const urlObj = new URL(requestUrl);
+                const protocol = urlObj.protocol === 'https:' ? https : http;
+
+                const options = {
+                    hostname: urlObj.hostname,
+                    port: urlObj.port,
+                    path: urlObj.pathname + urlObj.search,
+                    method: 'HEAD',
+                    headers: {
+                        'User-Agent': 'curl/8.0.0',
+                        'Accept': '*/*',
+                        'Connection': 'close'
+                    },
+                    timeout: 10000
+                };
+
+                console.log(`🔍 Getting file size from ${urlObj.hostname}:${urlObj.port || (protocol === https ? 443 : 80)}`);
+
+                const request = protocol.request(options, (response) => {
+                    console.log(`📡 HEAD ${response.statusCode} ${response.statusMessage}`);
+
+                    // Handle redirects
+                    if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+                        console.log(`🔄 HEAD redirect to: ${response.headers.location}`);
+                        response.destroy();
+                        return performHeadRequest(response.headers.location, redirectCount + 1);
+                    }
+
+                    if (response.statusCode !== 200) {
+                        console.log(`⚠️ HEAD request failed, will try GET without size info`);
+                        return resolve(0);
+                    }
+
+                    const contentLength = parseInt(response.headers['content-length']) || 0;
+                    if (contentLength > 0) {
+                        console.log(`📊 File size: ${(contentLength / 1024 / 1024).toFixed(2)} MB`);
+                    } else {
+                        console.log(`⚠️ No Content-Length header found`);
+                    }
+
+                    response.destroy();
+                    resolve(contentLength);
+                });
+
+                request.on('error', (error) => {
+                    console.log(`⚠️ HEAD request error, will try GET without size info:`, error.message);
+                    resolve(0);
+                });
+
+                request.on('timeout', () => {
+                    console.log(`⚠️ HEAD request timeout, will try GET without size info`);
+                    request.destroy();
+                    resolve(0);
+                });
+
+                request.end();
+            };
+
+            performHeadRequest(url);
+        });
+    }
+
     // Curl-inspired download implementation
     curlStyleDownload(url, filepath, romName) {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             const startTime = process.hrtime.bigint();
             let downloadedBytes = 0;
             let totalBytes = 0;
-            
+
+            try {
+                // First, try to get file size with HEAD request
+                totalBytes = await this.getFileSize(url);
+                if (totalBytes > 0) {
+                    console.log(`✅ Pre-download file size detected: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
+                }
+            } catch (error) {
+                console.log(`⚠️ Could not get file size, proceeding with download:`, error.message);
+            }
+
             // Follow redirects like curl does
             const performRequest = (requestUrl, redirectCount = 0) => {
                 if (redirectCount > 10) {
@@ -52,7 +132,7 @@ export class CurlDownloader {
 
                 const urlObj = new URL(requestUrl);
                 const protocol = urlObj.protocol === 'https:' ? https : http;
-                
+
                 // Curl-style request options - minimal and fast
                 const options = {
                     hostname: urlObj.hostname,
@@ -72,7 +152,7 @@ export class CurlDownloader {
 
                 const request = protocol.request(options, (response) => {
                     console.log(`📡 HTTP ${response.statusCode} ${response.statusMessage}`);
-                    
+
                     // Handle redirects like curl
                     if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
                         console.log(`🔄 Redirect to: ${response.headers.location}`);
@@ -84,10 +164,13 @@ export class CurlDownloader {
                         return reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
                     }
 
-                    // Get content length like curl
-                    totalBytes = parseInt(response.headers['content-length']) || 0;
-                    if (totalBytes > 0) {
-                        console.log(`📊 Content-Length: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
+                    // Use pre-fetched size or fall back to Content-Length header
+                    const responseContentLength = parseInt(response.headers['content-length']) || 0;
+                    if (totalBytes === 0 && responseContentLength > 0) {
+                        totalBytes = responseContentLength;
+                        console.log(`📊 Content-Length from GET response: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
+                    } else if (totalBytes > 0) {
+                        console.log(`📊 Using pre-fetched file size: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
                     }
 
                     // Create file descriptor directly (like curl's file handling)

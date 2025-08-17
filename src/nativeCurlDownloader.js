@@ -59,14 +59,95 @@ export class NativeCurlDownloader {
         return this.nativeCurlDownload(rom.downloadUrl, filepath, rom.name);
     }
 
+    // Get file size using curl HEAD request
+    async getFileSize(url) {
+        return new Promise((resolve, reject) => {
+            console.log(`🔍 Getting file size for: ${url}`);
+
+            const curlArgs = [
+                url,
+                '-I',                          // HEAD request only
+                '-L',                          // Follow redirects
+                '--max-redirs', '10',          // Max redirects
+                '--connect-timeout', '10',     // Connection timeout
+                '--max-time', '30',            // Max total time
+                '--user-agent', 'curl/8.0.0', // User agent
+                '--fail',                      // Fail on HTTP errors
+                '--silent',                    // Silent mode
+                '--show-error',                // Show errors
+                '--write-out', '%{size_download}\\n%{content_type}\\n%{response_code}\\n' // Output stats
+            ];
+
+            console.log(`🌐 Executing HEAD request: curl ${curlArgs.join(' ')}`);
+
+            const curl = spawn('curl', curlArgs);
+            let outputBuffer = '';
+            let errorBuffer = '';
+
+            curl.stdout.on('data', (data) => {
+                outputBuffer += data.toString();
+            });
+
+            curl.stderr.on('data', (data) => {
+                errorBuffer += data.toString();
+            });
+
+            curl.on('close', (code) => {
+                if (code !== 0) {
+                    console.log(`⚠️ HEAD request failed (code ${code}), will proceed without size info`);
+                    console.log(`⚠️ Error: ${errorBuffer.trim()}`);
+                    return resolve(0);
+                }
+
+                // Parse the headers from the output
+                const lines = outputBuffer.split('\n');
+                let contentLength = 0;
+
+                for (const line of lines) {
+                    const lowerLine = line.toLowerCase();
+                    if (lowerLine.startsWith('content-length:')) {
+                        const match = line.match(/content-length:\s*(\d+)/i);
+                        if (match) {
+                            contentLength = parseInt(match[1]);
+                            break;
+                        }
+                    }
+                }
+
+                if (contentLength > 0) {
+                    console.log(`📊 File size detected: ${(contentLength / 1024 / 1024).toFixed(2)} MB`);
+                } else {
+                    console.log(`⚠️ No Content-Length header found in HEAD response`);
+                }
+
+                resolve(contentLength);
+            });
+
+            curl.on('error', (error) => {
+                console.log(`⚠️ HEAD request error, will proceed without size info:`, error.message);
+                resolve(0);
+            });
+        });
+    }
+
     // Native curl download implementation
     nativeCurlDownload(url, filepath, romName) {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             const startTime = Date.now();
             let downloadedBytes = 0;
             let totalBytes = 0;
             let lastProgressTime = startTime;
             let lastProgressBytes = 0;
+
+            try {
+                // First, try to get file size with HEAD request
+                totalBytes = await this.getFileSize(url);
+                if (totalBytes > 0) {
+                    console.log(`✅ Pre-download file size detected: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
+                }
+            } catch (error) {
+                console.log(`⚠️ Could not get file size, proceeding with download:`, error.message);
+            }
 
             // Curl arguments for maximum speed and compatibility
             const curlArgs = [

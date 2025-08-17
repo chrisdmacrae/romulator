@@ -359,6 +359,76 @@ export class RomDownloader {
         }
     }
 
+    // Get file size using HEAD request first
+    async getFileSize(url) {
+        return new Promise((resolve, reject) => {
+            const performHeadRequest = (requestUrl, redirectCount = 0) => {
+                if (redirectCount > 10) {
+                    return reject(new Error('Too many redirects'));
+                }
+
+                const urlObj = new URL(requestUrl);
+                const protocol = urlObj.protocol === 'https:' ? https : http;
+
+                const options = {
+                    hostname: urlObj.hostname,
+                    port: urlObj.port,
+                    path: urlObj.pathname + urlObj.search,
+                    method: 'HEAD',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Accept': '*/*',
+                        'Connection': 'close'
+                    },
+                    timeout: 10000
+                };
+
+                console.log(chalk.gray(`🔍 Getting file size from ${urlObj.hostname}:${urlObj.port || (protocol === https ? 443 : 80)}`));
+
+                const request = protocol.request(options, (response) => {
+                    console.log(chalk.gray(`📡 HEAD ${response.statusCode} ${response.statusMessage}`));
+
+                    // Handle redirects
+                    if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+                        console.log(chalk.yellow(`🔄 HEAD redirect to: ${response.headers.location}`));
+                        response.destroy();
+                        return performHeadRequest(response.headers.location, redirectCount + 1);
+                    }
+
+                    if (response.statusCode !== 200) {
+                        console.log(chalk.yellow(`⚠️ HEAD request failed, will try GET without size info`));
+                        return resolve(0);
+                    }
+
+                    const contentLength = parseInt(response.headers['content-length']) || 0;
+                    if (contentLength > 0) {
+                        console.log(chalk.blue(`📊 File size: ${(contentLength / 1024 / 1024).toFixed(2)} MB`));
+                    } else {
+                        console.log(chalk.yellow(`⚠️ No Content-Length header found`));
+                    }
+
+                    response.destroy();
+                    resolve(contentLength);
+                });
+
+                request.on('error', (error) => {
+                    console.log(chalk.yellow(`⚠️ HEAD request error, will try GET without size info:`, error.message));
+                    resolve(0);
+                });
+
+                request.on('timeout', () => {
+                    console.log(chalk.yellow(`⚠️ HEAD request timeout, will try GET without size info`));
+                    request.destroy();
+                    resolve(0);
+                });
+
+                request.end();
+            };
+
+            performHeadRequest(url);
+        });
+    }
+
     async downloadSingleRomHTTP(rom) {
         console.log(chalk.blue(`🔄 Downloading ROM via HTTP: ${rom.name}`));
 
@@ -374,6 +444,17 @@ export class RomDownloader {
 
         console.log(chalk.gray(`📁 Download directory: ${this.downloadDir}`));
         console.log(chalk.gray(`📁 Download filename: ${filename}`));
+
+        // First, try to get file size with HEAD request
+        let totalBytes = 0;
+        try {
+            totalBytes = await this.getFileSize(rom.downloadUrl);
+            if (totalBytes > 0) {
+                console.log(chalk.green(`✅ Pre-download file size detected: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`));
+            }
+        } catch (error) {
+            console.log(chalk.yellow(`⚠️ Could not get file size, proceeding with download:`, error.message));
+        }
 
         return new Promise((resolve, reject) => {
             const url = new URL(rom.downloadUrl);
@@ -397,10 +478,18 @@ export class RomDownloader {
                     return reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
                 }
 
-                const totalBytes = parseInt(response.headers['content-length']) || null;
-                let downloadedBytes = 0;
+                // Use pre-fetched size or fall back to Content-Length header
+                const responseContentLength = parseInt(response.headers['content-length']) || 0;
+                if (totalBytes === 0 && responseContentLength > 0) {
+                    totalBytes = responseContentLength;
+                    console.log(chalk.blue(`📊 Content-Length from GET response: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`));
+                } else if (totalBytes > 0) {
+                    console.log(chalk.blue(`📊 Using pre-fetched file size: ${(totalBytes / 1024 / 1024).toFixed(2)} MB`));
+                } else {
+                    console.log(chalk.yellow(`📊 Starting download - Total size: Unknown`));
+                }
 
-                console.log(chalk.blue(`📊 Starting download - Total size: ${totalBytes ? (totalBytes / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}`));
+                let downloadedBytes = 0;
 
                 // Create write stream
                 const fileStream = fs.createWriteStream(filepath);
